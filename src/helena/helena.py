@@ -562,37 +562,20 @@ def run(argv=None):
 	mem_gib = mem_bytes/(1024.**3)
 	ext = image_extension
 
-	#Define recognized output file data extensions that will be retained in "Dir"
-	FileExtensions = ['.PDT','.pdt','PLT','plt','.nam','.dat','.out']
-
-	#Create Directory lists and initialise numfolders to zero.
-	Dirlist = list() 		#List containing all simulation folder directories relative to HELENA
-	Dir = list() 			#List containing all output file in each Dirlist folder relative to HELENA
-
-	#Obtain home directory and contents
-	HomeDir = list() 		#List of all folders in home.
-	HomeDirContents = os.listdir( os.path.abspath(".") )
-	#Determine folders within home directory and add correct 'grammar'.
-	for i in range(0,len(HomeDirContents)):
-		if os.path.isdir(HomeDirContents[i]) == True:
-			HomeDir.append('./'+HomeDirContents[i]+'/')
-		#endif
-	#endfor
-
 	#Determine number of folders containing accepted file extensions (i.e. simulation folders)
-	numfolders, Dir, Dirlist = get_directories(HomeDir, FileExtensions)
+	numfolders, Dir, Dirlist, HomeDir = get_directories()
 
 	#Extract directories for all required data I/O files
 	#These directories are relative to HELENA.py directory
-	icpnam = list(filter(lambda x: 'icp.nam' in x, Dir))
-	icpdat = list(filter(lambda x: 'icp.dat' in x, Dir))
-	icpout = list(filter(lambda x: 'icp.out' in x, Dir))
-	mesh = list(filter(lambda x: 'initmesh.out' in x, Dir))
-	TEC2D = list(filter(lambda x: 'TECPLOT2D.' in x, Dir))
-	movieicp = list(filter(lambda x: 'movie_icp.' in x, Dir))
-	movie1 = list(filter(lambda x: 'movie1.' in x, Dir))
-	iprofiletec2d = list(filter(lambda x: 'iprofile_tec2d' in x, Dir))
-	boltztec = list(filter(lambda x: 'boltz_tec' in x, Dir))
+	icpnam = [x for x in Dir if "icp.nam" in x]
+	icpdat = [x for x in Dir if "icp.dat" in x]
+	icpout = [x for x in Dir if "icp.out" in x]
+	mesh = [x for x in Dir if "initmesh.out" in x]
+	TEC2D = [x for x in Dir if "TECPLOT2D." in x]
+	movieicp = [x for x in Dir if "movie_icp." in x]
+	movie1 = [x for x in Dir if "movie1." in x]
+	iprofiletec2d = [x for x in Dir if "iprofile_tec2d" in x]
+	boltztec = [x for x in Dir if "boltz_tec" in x]
 
 	R_mesh, Z_mesh, \
 		ISYMlist, IXZlist, \

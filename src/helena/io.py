@@ -1,7 +1,18 @@
 import os
 
 
-def get_directories(dir_home, file_extensions):
+def get_directories():
+    # Define recognized output file data extensions that will be retained in "Dir"
+    file_extensions = [".PDT", ".pdt", "PLT", "plt", ".nam", ".dat", ".out"]
+
+    # Obtain home directory and contents
+    dir_home = []  # List of all folders in home.
+    dir_home_contents = os.listdir(os.path.abspath("."))
+    # Determine folders within home directory and add correct 'grammar'.
+    for i in range(len(dir_home_contents)):
+        if os.path.isdir(dir_home_contents[i]):
+            dir_home.append("./" + dir_home_contents[i] + "/")
+
     directories = []  # List containing all simulation folder directories relative to HELENA
     files = []  # List containing all output file in each Dirlist folder relative to HELENA
 
@@ -32,4 +43,4 @@ def get_directories(dir_home, file_extensions):
         exit()
 
     # Maintain alphanumerical foldername structure (Dirlist) in-sync with dataname structure (Dir)
-    return numfolders, sorted(files), sorted(directories)
+    return numfolders, sorted(files), sorted(directories), dir_home
