@@ -35,6 +35,7 @@ classifiers = [
 ]
 
 [project.scripts]
+helena = "helena.helena:run"
 
 [project.optional-dependencies]
 tests = [
