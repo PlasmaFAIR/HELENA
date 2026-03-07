@@ -40,6 +40,7 @@ helena = "helena.helena:run"
 [project.optional-dependencies]
 tests = [
     "pytest>=9.0.2",
+    "snaptol>=0.0.3",
 ]
 lint = [
     "ruff>=0.15.4",

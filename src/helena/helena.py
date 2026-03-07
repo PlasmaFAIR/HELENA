@@ -24,11 +24,14 @@
 
 from pylab import *
 
-def run():
+def run(argv):
 	from optparse import OptionParser
 	parser = OptionParser()
 	parser.add_option("-f", "--first", action="store_true", dest="install", default=False, help="Install prompt for required python modules")
-	(options, args) = parser.parse_args()
+	import sys
+	if argv is None:
+		argv = sys.argv[1:]
+	(options, args) = parser.parse_args(argv)
 
 	if 'True' in str(options):
 		import os, sys
