@@ -21,6 +21,7 @@
 #====================================================================#
 
 from pylab import *
+from .io import get_directories
 
 def run(argv=None):
 	from optparse import OptionParser
@@ -566,7 +567,6 @@ def run(argv=None):
 	#Create Directory lists and initialise numfolders to zero.
 	Dirlist = list() 		#List containing all simulation folder directories relative to HELENA
 	Dir = list() 			#List containing all output file in each Dirlist folder relative to HELENA
-	numfolders = 0			#Initiate folder number to zero
 
 	#Obtain home directory and contents
 	HomeDir = list() 		#List of all folders in home.
@@ -579,39 +579,7 @@ def run(argv=None):
 	#endfor
 
 	#Determine number of folders containing accepted file extensions (i.e. simulation folders)
-	#Extract directories of each sub-folder within home directory
-	for i in range(0,len(HomeDir)):
-		previousnumfolders = numfolders
-		CurrentDir = HomeDir[i]
-		DirContents = os.listdir(CurrentDir)
-
-		#For each file contained within the subfolders, determine which are datafiles.
-		for j in range(0,len(DirContents)):
-			Filename = DirContents[j]
-
-			#Save datafiles (with root) to working directory (Dir) and number of datafolders.
-			if any([x in Filename for x in FileExtensions]):
-				Dir.append(CurrentDir+Filename)
-				if (numfolders - previousnumfolders) == 0:
-					Dirlist.append(CurrentDir)
-					numfolders += 1
-				#endif
-			else:
-				File_Format_Is_Not_Requested = 1
-			#endif
-		#endfor
-	#endfor
-	#Maintain alphanumerical foldername structure (Dirlist) in-sync with dataname structure (Dir)
-	Dir,Dirlist = sorted(Dir),sorted(Dirlist)
-
-	#If no folders detected, end analysis script.
-	if numfolders == 0:
-		print( '-------------------------------------------')
-		print( 'No Ouput Files Detected, Aborting Analysis.')
-		print( '-------------------------------------------')
-		print( '')
-		exit()
-	#endif
+	numfolders, Dir, Dirlist = get_directories(HomeDir, FileExtensions)
 
 	#Extract directories for all required data I/O files
 	#These directories are relative to HELENA.py directory
