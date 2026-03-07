@@ -479,6 +479,7 @@ def get_mesh_and_SI(
         IMOVIE_FRAMES,
         header_icpdat,
         AtomicSpecies,
+        FluidSpecies,
         NeutSpecies,
         PosSpecies,
         NegSpecies,

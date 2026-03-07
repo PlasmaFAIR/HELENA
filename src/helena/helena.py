@@ -589,16 +589,16 @@ def run(argv=None):
 		PRESOUT, \
 		IMOVIE_FRAMES, \
 		header_icpdat, \
-		AtomicSpecies, NeutSpecies, PosSpecies, NegSpecies = get_mesh_and_SI(numfolders,
-																			 Dirlist,
-																			 icpnam,
-																			 icpdat,
-																			 TEC2D,
-																			 mesh,
-																			 Magmesh,
-																			 image_plotsymmetry,
-																			 IDEBUG,
-																			 )
+		AtomicSpecies, FluidSpecies, NeutSpecies, PosSpecies, NegSpecies = get_mesh_and_SI(numfolders,
+																						   Dirlist,
+																						   icpnam,
+																						   icpdat,
+																						   TEC2D,
+																						   mesh,
+																						   Magmesh,
+																						   image_plotsymmetry,
+																						   IDEBUG,
+																						   )
 
 	#==========##========================##==========#
 	#==========##========================##==========#
