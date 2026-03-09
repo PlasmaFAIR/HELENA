@@ -23,7 +23,7 @@
 from pylab import *
 from .io import get_directories
 from .initialisation import get_mesh_and_SI
-from .data import extract_raw_data
+from .data import extract_raw_data, read_TEC2D
 from .variables import enumerate_variables, enumerate_vectors, variable_interpolator, variable_unit_conversion, azimuthal_phase_conversion
 from .utility import string_in_variable
 
@@ -613,58 +613,6 @@ def run(argv=None):
 					#UNPACKING AND ORGANIZATION OF DATA#
 	#====================================================================#
 
-	#Takes ASCII data in 2/3D format and converts to HELENA friendly structure.
-	#Requires rawdata(2D/3D), header and variable number and mesh dimensions.
-	#Allows for an optional offset in 'starting' variable number.
-	#Returns 2D array of form [Variables,datapoint(R,Z)]
-	#CurrentFolderData = ReadTEC2D(rawdata_2D[l],header_2D,numvariables_2D)
-	def ReadTEC2D(Rawdata,header,numvariables,offset=0,Zmesh=0,Rmesh=0,Dimension='2D'):
-
-		#If no mesh sizes supplied, collect sizes for current global folder.
-		if Rmesh == 0 and Zmesh == 0:
-			Rmesh,Zmesh = R_mesh[l],Z_mesh[l]
-		#endif
-
-		#Excluding the header, split each row of data and append items to 1D list.
-		CurrentFolderData, DataArray1D = list(),list()
-		for i in range(header,len(Rawdata)):
-
-			#If end of phasecycle reached, break. (Applicable to 3D Datafiles only)
-			if 'CYCL=' in Rawdata[i] or 'ITER=' in Rawdata[i]:
-				break
-			else: CurrentRow = Rawdata[i].split()
-
-			#For all elements in the current row, convert to float and save in list.
-			for j in range(0,len(CurrentRow)):
-				try: DataArray1D.append(float(CurrentRow[j]))
-				except: String_Conversion_Error = 1
-			#endfor
-		#endfor
-
-		#If data is 1D, seperate into 1D chunks using Zmesh as the chunk size
-		if Dimension == '1D':
-			#Seperate total 1D array into further 1D sub-arrays with data for each variable.
-			for i in range(offset,numvariables):
-				numstart = Zmesh*(i)
-				numend = Zmesh*(i+1)
-				CurrentFolderData.append(list(DataArray1D[numstart:numend]))
-			#endfor
-			return(CurrentFolderData)
-
-		#If data is 2D, return array in 2D chunks using Zmesh*Rmesh as the chunk size
-		elif Dimension == '2D':
-			#Seperate total 1D array into 2D array with data for each variable.
-			#Offset data by a certain number of variable 'chunks' if requested.
-			for i in range(offset,numvariables):
-				numstart = int( (Zmesh*Rmesh)*(i) )
-				numend = int( (Zmesh*Rmesh)*(i+1) )
-				CurrentFolderData.append(list(DataArray1D[numstart:numend]))
-			#endfor
-			return(CurrentFolderData)
-		#endif
-	#enddef
-
-
 	#Extracts all phase and variable data for the provided folder ID.
 	#Initial R and Z for CYCL=1 are skipped over and not saved.
 	#Takes current folder, returns Data[phase][variable][datapoints,R/Z]
@@ -711,7 +659,7 @@ def run(argv=None):
 
 			#R,Z arrays are saved only for first "Cycle", apply +2 variable index offset to ignore
 			if i == 0:
-				PhaseData = ReadTEC2D(rawdata,cycleloc[i],numvar+2,offset=2)
+				PhaseData = read_TEC2D(rawdata, cycleloc[i], numvar + 2, R_mesh[folder], Z_mesh[folder], offset=2)
 				#Convert data from CGS (HPEM DEFAULT) to user requested unit system
 				for j in range(0,len(Mov1VariableStrings)):
 					PhaseData[j] = variable_unit_conversion(PhaseData[j], Mov1VariableStrings[j], Units, AtomicSpecies)
@@ -721,7 +669,7 @@ def run(argv=None):
 
 			#Later cycles do not save R,Z arrays so no variable index offset is required.
 			elif i > 0:
-				PhaseData = ReadTEC2D(rawdata,cycleloc[i],numvar)
+				PhaseData = read_TEC2D(rawdata, cycleloc[i], numvar, R_mesh[folder], Z_mesh[folder])
 				for j in range(0,len(Mov1VariableStrings)):
 					PhaseData[j] = variable_unit_conversion(PhaseData[j], Mov1VariableStrings[j], Units, AtomicSpecies)
 	#				PhaseData[j] = AzimuthalPhaseConversion(PhaseData[j],Mov1VariableStrings[j])
@@ -2323,7 +2271,7 @@ def run(argv=None):
 		header_2Dlist.append(header_2D)														# REMOVE THIS
 
 		#Seperate total 1D data array into sets of data for each variable.
-		CurrentFolderData = ReadTEC2D(rawdata_2D[l],header_2D,numvariables_2D)
+		CurrentFolderData = read_TEC2D(rawdata_2D[l], header_2D, numvariables_2D, R_mesh[l], Z_mesh[l])
 
 		#Convert data from CGS (HPEM DEFAULT) to user requested unit system
 		for i in range(0,len(TEC2DVariableStrings)):
@@ -2474,7 +2422,7 @@ def run(argv=None):
 				#CurrentFolderData is saved in form: [iteration,variable,datapoint(R,Z)]
 				#CurrentIterData is saved in form: [variable,datapoint(R,Z)]
 				if i == 0:
-					CurrentIterData = ReadTEC2D(rawdata,Iterloc[i],numvar+2,offset=2)
+					CurrentIterData = read_TEC2D(rawdata, Iterloc[i], numvar + 2, R_mesh[l], Z_mesh[l], offset=2)
 	#				print(i, shape(CurrentIterData))
 	#				print(shape(CurrentFolderData))
 
@@ -2504,7 +2452,7 @@ def run(argv=None):
 				#CurrentFolderData is saved in form: [iteration,variable,datapoint(R,Z)]
 				#CurrentIterData is saved in form: [variable,datapoint(R,Z)]
 				elif i > 0:
-					CurrentIterData = ReadTEC2D(rawdata,Iterloc[i],numvar)
+					CurrentIterData = read_TEC2D(rawdata, Iterloc[i], numvar, R_mesh[l], Z_mesh[l])
 	#				print(i, shape(CurrentIterData))
 	#				print(shape(CurrentFolderData))
 
@@ -2574,7 +2522,7 @@ def run(argv=None):
 
 			#Seperate total 1D data array into sets of data for each variable.
 			#Data is stored in 2D array of shape: [EDFangle,EDFbins] or [I,J]
-			CurrentFolderData = ReadTEC2D(rawdata_IEDF[l],header_IEDF,numvariables_IEDF,0,I,J)
+			CurrentFolderData = read_TEC2D(rawdata_IEDF[l], header_IEDF, numvariables_IEDF, Rmesh=I, Zmesh=J, offset=0)
 
 			#Convert data from CGS (HPEM DEFAULT) to user requested unit system							!!! Not tested
 			for i in range(0,len(IEDFVariableStrings)):
