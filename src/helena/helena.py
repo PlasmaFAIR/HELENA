@@ -429,10 +429,10 @@ def run(argv=None):
 	#====================================================================#
 
 	#Variables and lists for basic processing
-	Dir = list()					#List of all datafile directories inside folders
-	Dirlist = list()				#List of all folder directories (not including filenames)
-	IEDFVariableStrings = list()	#List of all variable names in pcmc.prof in header order
-	Geometrylist = list()			#List containing commonly used geometries [LEGACY: NOT USED]
+	#Dir = list()					#List of all datafile directories inside folders
+	#Dirlist = list()				#List of all folder directories (not including filenames)
+	#IEDFVariableStrings = list()	#List of all variable names in pcmc.prof in header order
+	#Geometrylist = list()			#List containing commonly used geometries [LEGACY: NOT USED]
 
 	Globalvarlist = list()			#List of all commonly shared variable names between all folders
 	Globalnumvars = list()			#Number of commonly shared variables between all folders.
@@ -442,8 +442,8 @@ def run(argv=None):
 	#IXZlist = list()				#List of IXZ values in folder order in Dirlist
 	#R_mesh = list()					#List of radial mesh cells for initmesh.out in folder order in Dirlist
 	#Z_mesh = list()					#List of axial mesh cells for initmesh.out in folder order in Dirlist
-	Raxis = list()					#Radial SI [cm] axis for plotting
-	Zaxis = list()					#Axial SI [cm] axis for plotting
+	#Raxis = list()					#Radial SI [cm] axis for plotting
+	#Zaxis = list()					#Axial SI [cm] axis for plotting
 
 	#Depth = list()					#icp.nam Depth input [cm] in folder order in Dirlist
 	#Radius = list()					#icp.nam Radius input [cm] in folder order in Dirlist
@@ -458,23 +458,23 @@ def run(argv=None):
 	#FREQC        = list()									# Array of reals (In Material Order)
 	#FREQMAX,FREQMIN  = list(),list()						# Array of reals (In Material Order)
 	#FREQGLOB,FREQALL = list(),list()						# real
-	IRFPOW = list()											# real
-	PRESOUT = list()										# real
+	#IRFPOW = list()										# real
+	#PRESOUT = list()										# real
 	#IMOVIE_FRAMES = list()									# real
-	NUMMETALS=0; CMETALS,IETRODEM = list(),list()			# int;	Array of strings and ints, respectively
-	NUMCOILS=0; CCOILS = list()								# int;	Array of strings
-	IMATSTATS=0; CMATSTATS = list()							# int;	Array of strings
-	IPCMCSPEC=0; CPCMCSPEC = list()							# int;	Array of strings
+	#NUMMETALS=0; CMETALS,IETRODEM = list(),list()			# int;	Array of strings and ints, respectively
+	#NUMCOILS=0; CCOILS = list()								# int;	Array of strings
+	IMATSTATS=0#; CMATSTATS = list()							# int;	Array of strings
+	IPCMCSPEC=0#; CPCMCSPEC = list()							# int;	Array of strings
 	IEBINSPCMC=0; EMAXIPCMC=0								# int; 	int
 
 	#Lists for icp.dat variables
 	#header_icpdat = list()			#[SpeciesName, Charge, MolecularWeight, StickingCoeff,	- Array of strings
 									# Transport, ReturnFrac, ReturnName]
 	#AtomicSpecies = list()			#All species contained within chemistry set				- Array of strings
-	FluidSpecies  = list() 			#All neutral fluid species (for fluid dynamics) 		- Array of strings
+	#FluidSpecies  = list() 			#All neutral fluid species (for fluid dynamics) 		- Array of strings
 	#NeutSpecies	= list()			#All neutral and metastable species						- Array of strings
 	#PosSpecies = list()				#All positive ion species								- Array of strings
-	NegSpecies = list()				#All negative ion species								- Array of strings
+	#NegSpecies = list()				#All negative ion species								- Array of strings
 
 	#Lists to store raw data
 	rawdata_2D = list()				#ASCII format TECPLOT2D.pdt data string list			- Variable,Radius,Axis
