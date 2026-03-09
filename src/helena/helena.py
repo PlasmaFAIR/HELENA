@@ -23,7 +23,7 @@
 from pylab import *
 from .io import get_directories
 from .initialisation import get_mesh_and_SI
-from .data import extract_raw_data, read_TEC2D, read_TEC2D_phase
+from .data import extract_raw_data, read_TEC2D, read_TEC2D_phase, read_geometry
 from .variables import enumerate_variables, enumerate_vectors, variable_interpolator, variable_unit_conversion, azimuthal_phase_conversion
 from .utility import string_in_variable
 
@@ -612,138 +612,6 @@ def run(argv=None):
 	#====================================================================#
 					#UNPACKING AND ORGANIZATION OF DATA#
 	#====================================================================#
-
-	def ReadGeometry(DataFileDir,GeomFileDir):
-	#Takes .PDT file with TECPLOT "GEOMETRY" section, returns mesh nodes and connections
-	#Inputs,
-	#		DataFileDir = Relative filepath to data file,			String
-	#		(inc. filename, e.g. "Dir1/Dir2/TECPLOT2D.PDT")
-	#		GeomFileDir = Relative filepath/name to write to	 	String
-	#Returns,
-	#	MeshCoordinates: 2D array of [[radius,height],[radius,height],...]		:: [cm]
-	#					 List of mesh node (vertice) coordinates as floats
-	#					 Expects origin to be top-left corner
-	#	MeshConnections: 2D array of [[i, j],[i, j],...] 						:: [-]
-	#					 list of indices that identify connections between nodes
-	#					 indices are sequential to MeshCoordinates.
-	###########
-
-		# Global arrays carried through each geometry zone
-		conn_index_offset = 0
-		MeshCoordinates = list()
-		MeshConnections = list()
-
-		# Reusable arrays cleared on each geometry zone
-		geom_count = 0
-		geom_coords = []
-		geom_active = False
-		unique_gc = []
-		geom_line_ctr = 0
-		num_geom_lines = 0
-
-		# Open file containing GEOMETRY sections,
-		with open(DataFileDir, 'rt') as infile, open(GeomFileDir, 'wt') as outfile:
-			outfile.write("*START HEADER*\n")
-			outfile.write('TITLE="FE-LineSeg zones converted from GEOMETRIES"\n')
-			outfile.write('VARIABLES= "X" "Y"\n')
-
-			for line in infile:
-				if line.strip().upper().startswith('GEOMETRY'):
-					geom_count += 1
-					geom_active = True
-					geom_line_ctr = 0
-
-				# If in geometry section
-				elif geom_active:
-
-					# First line after GEOMETRY line is expected to hold number of line segments.
-					if geom_line_ctr == 0:
-						num_geom_lines = int(line[:-1]) * 3 + 1
-						# Always increase line counter
-						geom_line_ctr += 1
-
-					elif geom_line_ctr < num_geom_lines:
-						# If line is coordinate line, extract radius and height of node
-						if len(line.split()) >= 2:
-	#							geom_coords.append(line[:-1].split())		#Doesn't Reverse J(Z)-coordinates
-							r = float( line[:-1].split()[0] )
-							h = float( line[:-1].split()[1] )
-							h = ((Z_mesh[l]-2)*dz[l]) - h					#Reverse J(Z)-coordinates
-							geom_coords.append([r,h])
-						#endif
-
-						# Always increase line counter
-						geom_line_ctr += 1
-
-					else:
-						# create list of unique node coordinates:
-						for lineseg in geom_coords:
-							if lineseg not in unique_gc:
-								unique_gc.append(lineseg)
-							#endif
-						#endfor
-
-						# Write header
-						outfile.write(f'ZONE T="geometry-{geom_count}"\n')
-						outfile.write(f'Nodes={len(unique_gc)}, Elements={int(len(geom_coords)/2)}, ZONETYPE=FELINESEG\n')
-						outfile.write('DATAPACKING=POINT\n')
-						outfile.write('DT=(SINGLE SINGLE)\n')
-						outfile.write("*END HEADER*\n")
-						outfile.write("*\n")
-
-						# create connectivity list
-						conn_list = list()
-						for i in range(0, len(geom_coords),2):
-							r = unique_gc.index(geom_coords[i]) + 1
-							h = unique_gc.index(geom_coords[i+1]) + 1
-							conn_list.append([r,h])
-						#endfor
-
-						outfile.write("*NODE LIST*\n")
-						# node coords in point format:
-						for n in unique_gc:
-							outfile.write(f' {n[0]}   {n[1]}\n')
-						#endfor
-
-						outfile.write("*CONN LIST*\n")
-						# connection list sequentally relative to node coordinate indices
-						for i in range(0, len(geom_coords),2):
-							outfile.write(f" {unique_gc.index(geom_coords[i])+1} {unique_gc.index(geom_coords[i+1])+1}\n")
-						#endfor
-						outfile.write("*\n")
-
-						# Geometries are saved in "zones" of 50 nodes
-						# Concat coordinate arrays together, no offset needed
-						for n in range(0,len(unique_gc)):
-							MeshCoordinates.append( unique_gc[n] )
-						#endfor
-
-						# Concat connection lists together with index offset
-						for n in range(0,len(conn_list)):
-							i = conn_list[n][0] + conn_index_offset
-							j = conn_list[n][1] + conn_index_offset
-							conn_offset = [i,j]
-
-							MeshConnections.append( conn_offset )
-						#endfor
-
-						# Update conn index offset with len of coordinates from current zone
-						# NOTE: THIS MUST BE PERFORMED AFTER APPENDING CURRENT ZONE TO MeshConnections
-						conn_index_offset += len(unique_gc)
-
-						# clean memory for next geometry zone
-						geom_coords = []
-						unique_gc = []
-						geom_active = False
-						geom_line_ctr = 0
-					#endif
-				#endif
-			#endfor
-		#endwith
-
-		return(MeshCoordinates, MeshConnections)
-	#enddef
-
 
 	def WriteToCSV(Data, Directory, Filename, Header=[], Mode='w'):
 	#Takes 1D or 2D array and writes to a datafile in .csv format
@@ -2169,7 +2037,7 @@ def run(argv=None):
 		# MeshCoordinates[Folder][Nodes [R1,Z2], [R2,Z2], ...]
 		for l in range (0,numfolders):
 			GeomFileDir = DataFileDir[l].rsplit('/',1)[0] + "/meshnodes.dat"
-			MeshCoord,MeshConn = ReadGeometry(DataFileDir[l],GeomFileDir)
+			MeshCoord,MeshConn = read_geometry(DataFileDir[l], GeomFileDir, Z_mesh[l], dz[l])
 
 			MeshCoordinates.append(MeshCoord)
 			MeshConnections.append(MeshConn)
