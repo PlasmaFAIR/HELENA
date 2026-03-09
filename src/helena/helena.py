@@ -21,7 +21,7 @@
 #====================================================================#
 
 from pylab import *
-from .io import get_directories
+from .io import get_directories, write_to_csv
 from .initialisation import get_mesh_and_SI
 from .data import extract_raw_data, read_TEC2D, read_TEC2D_phase, read_geometry
 from .variables import enumerate_variables, enumerate_vectors, variable_interpolator, variable_unit_conversion, azimuthal_phase_conversion
@@ -612,143 +612,6 @@ def run(argv=None):
 	#====================================================================#
 					#UNPACKING AND ORGANIZATION OF DATA#
 	#====================================================================#
-
-	def WriteToCSV(Data, Directory, Filename, Header=[], Mode='w'):
-	#Takes 1D or 2D array and writes to a datafile in .csv format
-	#Inputs,
-	#		Data = Data to be written, Array (real) :: 1D or 2D
-	#			Align data array row-wise, 	i.e. [i,j] = [Radius,Height]
-	#			Origin as per HPEM mesh, 	i.e. [0,0] = top left corner of image
-	#		Directory = Folder to write to, String
-	#		Filename = Data file will be named "Filename.csv", String
-	#		Header = Array of Header information, String
-	#		Mode = "w" to write new file or "a" to append to existing file
-	#Returns,
-	#		()
-	###########
-
-		#Write array length and SI dimension to file
-		with open(Directory+Filename, Mode) as file:
-
-			# Open Header
-			file.write( '*START HEADER*' )
-			file.write('\n')
-			# Write supplied header information
-			for i in range(0,len(Header)):
-				file.write( Header[i] )
-				file.write('\n')
-			#endfor
-
-			# Close Header
-			file.write( '*END HEADER*' )
-			file.write('\n')
-
-			# Append CSV formatted data after header
-			writer = csv.writer(file)
-			# Write 1D array as a single row
-			if np.ndim(Data) == 1:
-				writer.writerow(Data)
-			# Write 2D array [i,j] as: 'i rows of j length each'
-			elif np.ndim(Data) == 2:
-				writer.writerows(Data)
-			else:
-				raise ValueError("Data must be 1D or 2D")
-			#endif
-		#endwith
-
-		return()
-	#enddef
-
-
-	def ReadFromCSV(Directory, Filename, Mode='r', Cycle=0):
-	#Reads a .csv formatted file and returns a 1D or 2D data array and 1D header array
-	#Inputs,
-	#		Directory = Folder to read from. 						[String]
-	#		Filename = Data file will be named "Filename.csv". 		[String]
-	#		Mode = "w" to write new file or "a" to append to existing file.
-	#		Cycle = For time-resolved data, each 2D data array is sequentially
-	#				written as a new "Cycle". 						[Integer]
-	#Returns,
-	#		Header = 1D array containing each row of header data	[Strings]
-	#		Data = 1D or 2D array of data following Header			[Floats]
-	#Notes,
-	#		1D arrays are returned as nested list, i.e. [[DATA]]
-	###########
-
-		#Write array length and SI dimension to file
-		with open(Directory+Filename, Mode) as file:
-
-			# Initiate any required lists
-			Header = list()
-			Data = list()
-
-			# Read Header sequentially and identify end index
-			RawData = file.readlines()
-			for i in range(0,len(RawData)):
-
-				# Strip "new line" character (\n) from each entry
-				Header.append(RawData[i].strip('\n'))
-				# Stop once "*END HEADER*" is reached
-				if "*END HEADER*" in RawData[i]:
-					# Data block starts 1 idx after *END HEADER*
-					DataStartidx = i+1
-					break
-				#endif
-			#endfor
-
-			# Identify end index of data block
-			for i in range(DataStartidx,len(RawData)):
-
-				# Cyclic data blocks are deliminated by next header
-				if "*START HEADER*" in RawData[i]:
-					DataEndidx = i
-					break
-				else:
-					# Non-cyclic data continues to end of file
-					DataEndidx = len(RawData)
-				#endif
-			#endfor
-
-			# Advance data indices to requested Cycle
-			if Cycle > 0:
-
-				# Read length of Cycle header - default 3
-				for i in range(DataEndidx,len(RawData)):
-
-					# Stop once "*END HEADER*" is reached
-					if "*END HEADER*" in RawData[i]:
-						CycleHeaderidx = i
-						CycleHeaderLen = CycleHeaderidx-DataEndidx+1
-						break
-					else:
-						CycleHeaderLen = 3
-					#endif
-				#endfor
-
-				# Advance data start and end indices to requested cycle
-				DataBlockLen = DataEndidx-DataStartidx
-				DataStartidx += Cycle * (DataBlockLen + CycleHeaderLen)
-				DataEndidx += Cycle * (DataBlockLen + CycleHeaderLen)
-			#endif
-
-			# Read Data and append to output array in row-wise fashion
-			for i in range(DataStartidx,DataEndidx):
-
-				# Split each row into scalars, assuming comma delimination
-				SplitRow = RawData[i].split(',')
-				# Convert each scalar from .csv dtype U8 to dtype U16 float
-				for j in range(0,len(SplitRow)):
-					SplitRow[j] = float(SplitRow[j])
-				#endfor
-
-				# Append Row-wise to output data array
-				Data.append(SplitRow)
-			#endfor
-		#endwith
-
-		return(Data,Header)
-	#enddef
-
 
 	def WriteDataToFile(data,filename,structure='w'):
 	#Takes a 1D or 2D array and writes to a datafile in ASCII format.
@@ -4391,7 +4254,7 @@ def run(argv=None):
 					CSVHeader = [CSVTitle,CSVLabel,CSVISYM,CSVRotate,CSVRMesh,CSVZMesh]
 
 					# Write to .csv
-					WriteToCSV(Image, CSVDir, CSVFilename, CSVHeader)
+					write_to_csv(Image, CSVDir, CSVFilename, CSVHeader)
 
 					# Write Sheath Data separately as it is not included in the VariableList format
 					if image_plotsheath in ['Radial','Axial'] and i == len(VariableIndices)-1:
@@ -4535,7 +4398,7 @@ def run(argv=None):
 
 						# Write 2D data to CSV file for current variable [i] at current iteration [k]
 						CSVHeader = [CSVTitle,CSVLabel,CSVCurITER,CSVISYM,CSVRotate,CSVRMesh,CSVZMesh]
-						WriteToCSV(Image, CSVDir, CSVFilename, CSVHeader, Mode='w')
+						write_to_csv(Image, CSVDir, CSVFilename, CSVHeader, mode='w')
 
 						# Write Sheath Data separately as it is not included in the VariableList format
 						if image_plotsheath in ['Radial','Axial'] and i == len(VariableIndices)-1:
@@ -4732,7 +4595,7 @@ def run(argv=None):
 						CSVHeader = [CSVTitle,CSVLabel,CSVISYM,CSVRotate,CSVCells,CSVRMesh,CSVZMesh]
 
 						# Write to .csv file
-						WriteToCSV(CSVProfiles, CSVDir, CSVFilename, CSVHeader)
+						write_to_csv(CSVProfiles, CSVDir, CSVFilename, CSVHeader)
 					#endif
 				#endfor
 				clearfigures(fig)
@@ -4803,7 +4666,7 @@ def run(argv=None):
 						CSVHeader = [CSVTitle,CSVLabel,CSVISYM,CSVRotate,CSVCells,CSVRMesh,CSVZMesh]
 
 						# Write to .csv file
-						WriteToCSV(CSVProfiles, CSVDir, CSVFilename, CSVHeader)
+						write_to_csv(CSVProfiles, CSVDir, CSVFilename, CSVHeader)
 					#endif
 				#endfor
 				clearfigures(fig)
@@ -5352,7 +5215,7 @@ def run(argv=None):
 					CSVHeader = [CSVTitle,CSVLabel,CSVTMax,CSVdT]
 
 					# Write to .csv file
-					WriteToCSV(TemporalProfile, CSVDir, CSVFilename, CSVHeader)
+					write_to_csv(TemporalProfile, CSVDir, CSVFilename, CSVHeader)
 				#endif
 
 				#=====#
@@ -5653,7 +5516,7 @@ def run(argv=None):
 					CSVHeader = [CSVTitle,CSVLabel,CSVEnergyAxis,CSVAngleAxis]
 
 					# Write to .csv
-					WriteToCSV(EDFImage, CSVDir, CSVFilename, CSVHeader)
+					write_to_csv(EDFImage, CSVDir, CSVFilename, CSVHeader)
 				#endif
 
 				#=====#
@@ -7175,12 +7038,12 @@ def run(argv=None):
 							# Write to .csv file, including full header on first CYCLE
 							if j == 0:
 								CSVHeader = [CSVTitle,CSVLabel,CSVMaxCYCL,CSVISYM,CSVRotate,CSVRMesh,CSVZMesh]
-								WriteToCSV(phaseresolvedProfile[::-1], CSVDir, CSVFilename, CSVHeader, Mode='w')
+								write_to_csv(phaseresolvedProfile[::-1], CSVDir, CSVFilename, CSVHeader, mode='w')
 
 							# Write to .csv file, including only CYCL number for all remaining CYCLEs
 							elif j > 0:
 								CSVHeader = [CSVCurCYCL]
-								WriteToCSV(phaseresolvedProfile[::-1], CSVDir, CSVFilename, CSVHeader, Mode='a')
+								write_to_csv(phaseresolvedProfile[::-1], CSVDir, CSVFilename, CSVHeader, mode='a')
 							#endif
 						#endif
 
@@ -7461,12 +7324,12 @@ def run(argv=None):
 						# Write to .csv file, including full header on first CYCLE
 						if j == 0:
 							CSVHeader = [CSVTitle,CSVLabel,CSVMaxCYCL,CSVISYM,CSVRotate,CSVRMesh,CSVZMesh]
-							WriteToCSV(Image, CSVDir, CSVFilename, CSVHeader, Mode='w')
+							write_to_csv(Image, CSVDir, CSVFilename, CSVHeader, mode='w')
 
 						# Write to .csv file, including only CYCL number for all remaining CYCLEs
 						elif j > 0:
 							CSVHeader = [CSVCurCYCL]
-							WriteToCSV(Image, CSVDir, CSVFilename, CSVHeader, Mode='a')
+							write_to_csv(Image, CSVDir, CSVFilename, CSVHeader, mode='a')
 						#endif
 					#endif
 
