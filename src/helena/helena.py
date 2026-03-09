@@ -23,7 +23,7 @@
 from pylab import *
 from .io import get_directories
 from .initialisation import get_mesh_and_SI
-from .data import enumerate_variables, enumerate_vectors, variable_interpolator, variable_unit_conversion, azimuthal_phase_conversion
+from .variables import enumerate_variables, enumerate_vectors, variable_interpolator, variable_unit_conversion, azimuthal_phase_conversion
 from .utility import string_in_variable
 
 def run(argv=None):
