@@ -23,7 +23,7 @@
 from pylab import *
 from .io import get_directories
 from .initialisation import get_mesh_and_SI
-from .data import enumerate_variables, enumerate_vectors, variable_interpolator, variable_unit_conversion
+from .data import enumerate_variables, enumerate_vectors, variable_interpolator, variable_unit_conversion, azimuthal_phase_conversion
 from .utility import string_in_variable
 
 def run(argv=None):
@@ -611,49 +611,6 @@ def run(argv=None):
 	#====================================================================#
 					#UNPACKING AND ORGANIZATION OF DATA#
 	#====================================================================#
-
-	#Applies field phase to sign of field amplitude for azimuthal data arrays.
-	#Takes 1D, or 2D data profile and variable string.
-	#Returns data array multiplied by sin(phase).
-	#Returns non-azimuthal data arrays unchanged.
-	def AzimuthalPhaseConversion(profile,variable):
-
-		#Global toggle to enforce plotting of magnitudes only if requested
-		if ConvAzimuthalPhase == False:	return(profile)
-
-		#=====#=====#
-
-		#Only Azimuthally varying fields require phase conversion
-		elif string_in_variable(variable, ['ETHETA']) == True:
-			phaseprocess,phasevariable = enumerate_variables(['PHASE'], Header_TEC2D[l])
-		elif string_in_variable(variable, ['J-THETA']) == True:
-			phaseprocess,phasevariable = enumerate_variables(['PHASE'], Header_TEC2D[l])
-		elif string_in_variable(variable, ['J-TH(MAG)']) == True:
-			phaseprocess,phasevariable = enumerate_variables(['J-TH(PHA)'], Header_TEC2D[l])
-		else:
-			return(profile)
-		#endif
-
-		#Extract the appropriate phase data for the supplied variable
-		phasemap = ImageExtractor2D(Data[l][phaseprocess[0]],phasevariable[0])
-
-		#Convert from phase [0 --> 2pi] to relative azimuthal direction (0 --> -1 --> +1)
-		for i in range(0,len(phasemap)):
-			for j in range(0,len(phasemap[i])):
-				phasemap[i][j] = np.sin(phasemap[i][j])
-			#endfor
-		#endfor
-
-		#Multiply azimuthal data amplitude by sin( azimuthal phase )
-		if len(profile.shape) == 2:
-			profile = profile*phasemap							# 2D data profile
-		elif len(profile.shape) == 1:
-			profile = profile*phasemap.flatten()				# 1D data profile
-		#endif													# !!! RM SJD, Not Tested 1D Yet!
-
-		return(profile)
-	#enddef
-
 
 	#Takes full directory list (Dir) and data filename type (e.g. .png, .txt)
 	#Returns row-wise list of data and length of datafile.
@@ -3003,7 +2960,7 @@ def run(argv=None):
 	#	Image = VariableUnitConversion(Image,Variable, Units, AtomicSpecies)
 
 		#Convert Azimuthal phase if required.					!!! RM SJD, MOVE THIS CONVERSION TO READ-IN
-		Image = AzimuthalPhaseConversion(Image,Variable)
+		Image = azimuthal_phase_conversion(Image, Variable)
 
 		return(Image)
 	#enddef

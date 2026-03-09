@@ -436,3 +436,44 @@ def variable_unit_conversion(profile, variable, units="SI", atomic_species=None)
                 profile[i] = profile[i]  # [cm-3]
 
     return profile
+
+
+def azimuthal_phase_conversion(profile, variable):
+    # Applies field phase to sign of field amplitude for azimuthal data arrays.
+    # Takes 1D, or 2D data profile and variable string.
+    # Returns data array multiplied by sin(phase).
+    # Returns non-azimuthal data arrays unchanged.
+
+    return profile
+
+    # FIXME
+
+    # Global toggle to enforce plotting of magnitudes only if requested
+    # Only Azimuthally varying fields require phase conversion
+    # if ConvAzimuthalPhase == False:
+    #    return (profile)
+    # elif string_in_variable(variable, ['ETHETA']) == True:
+    #    phaseprocess, phasevariable = enumerate_variables(['PHASE'], Header_TEC2D[l])
+    # elif string_in_variable(variable, ['J-THETA']) == True:
+    #    phaseprocess, phasevariable = enumerate_variables(['PHASE'], Header_TEC2D[l])
+    # elif string_in_variable(variable, ['J-TH(MAG)']) == True:
+    #    phaseprocess, phasevariable = enumerate_variables(['J-TH(PHA)'], Header_TEC2D[l])
+    # else:
+    #    return (profile)
+
+    # Extract the appropriate phase data for the supplied variable
+    # phasemap = ImageExtractor2D(Data[l][phaseprocess[0]], phasevariable[0])
+
+    # Convert from phase [0 --> 2pi] to relative azimuthal direction (0 --> -1 --> +1)
+    # for i in range(0, len(phasemap)):
+    #    for j in range(0, len(phasemap[i])):
+    #        phasemap[i][j] = np.sin(phasemap[i][j])
+
+    # Multiply azimuthal data amplitude by sin( azimuthal phase )
+    # if len(profile.shape) == 2:
+    #    profile = profile * phasemap  # 2D data profile
+    # elif len(profile.shape) == 1:
+    #    profile = profile * phasemap.flatten()  # 1D data profile
+    # !!! RM SJD, Not Tested 1D Yet!
+
+    # return profile
