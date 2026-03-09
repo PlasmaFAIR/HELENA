@@ -21,7 +21,7 @@
 #====================================================================#
 
 from pylab import *
-from .io import get_directories, write_to_csv
+from .io import get_directories, write_to_csv, write_data_to_file, read_data_from_file
 from .initialisation import get_mesh_and_SI
 from .data import extract_raw_data, read_TEC2D, read_TEC2D_phase, read_geometry
 from .variables import enumerate_variables, enumerate_vectors, variable_interpolator, variable_unit_conversion, azimuthal_phase_conversion
@@ -612,137 +612,6 @@ def run(argv=None):
 	#====================================================================#
 					#UNPACKING AND ORGANIZATION OF DATA#
 	#====================================================================#
-
-	def WriteDataToFile(data,filename,structure='w'):
-	#Takes a 1D or 2D array and writes to a datafile in ASCII format.
-	#Three imputs, Data to be written, Filename, 'w'rite or 'a'ppend.
-	#Data is written orientated as plotted (i.e. j=z=0 is zero at origin)
-	#WriteDataToFile(Image, FolderNameTrimmer(Dirlist[l])+VariableStrings[k])
-
-		#Determine dimensionality of profile.
-		if isinstance(data[0], (list, np.ndarray) ) == True:
-			datafile = open(filename, structure)
-
-			#Write array length and SI dimension to file
-			datafile.write( 'R_Mesh [Cells] '+str(R_mesh[l])+'  :: dR [cm/cell] '+str(dr[l]) )
-			datafile.write('\n')
-			datafile.write( 'Z_Mesh [Cells] '+str(Z_mesh[l])+'  :: dZ [cm/cell] '+str(dz[l]) )
-			datafile.write('\n')
-
-			#Write 2D array of data to file
-			for m in range(0,len(data)):
-				for n in range(0,len(data[m])):
-					datafile.write(str(data[m][n]))
-					datafile.write(' ')
-				#endfor
-				datafile.write('\n')
-			#endfor
-			datafile.close()
-
-		#Lowest dimention is scalar: ==> 1D array.
-		elif isinstance(data, (list, np.ndarray) ) == True:
-			datafile = open(filename, structure)
-
-			#Write array length and SI dimension to file
-			if len(data) == R_mesh[l]:
-				datafile.write( 'R_Mesh [cells] '+str(R_mesh[l])+'  :: dR [cm/cell] '+str(dr[l]) )
-				datafile.write('\n')
-			if len(data) == Z_mesh[l]:
-				datafile.write( 'Z_Mesh [cells] '+str(Z_mesh[l])+'  :: dZ [cm/cell] '+str(dz[l]) )
-				datafile.write('\n')
-			#endif
-
-			#Write 1D array of data to file
-			for n in range(0,len(data)):
-				datafile.write(str(data[n]))
-				datafile.write(' ')
-			#endfor
-			datafile.close()
-
-		return()
-	#enddef
-
-
-	#Reads 1D or 2D data from textfile in ASCII format, returns data and header.
-	#Input filename, header length, data dimension and orientation (CSV or RSV).
-	#Example: OutputData,Header = ReadDataFromFile('/Data.txt', 1, '2D', CSV)
-	def ReadDataFromFile(Filename,HeaderIdx=0,Dimension='2D',Orientation='CSV'):
-		OutputData,Header = list(),list()
-
-		#If data is saved 'Row-wise', use default readin routine.
-		if Orientation == 'RSV':
-			#Determine dimensionality of profile.
-			if Dimension in ['1D','2D']:
-				#Read in 2D data from ASCII formatted file.
-				datafile = open(Filename)
-				RawData = datafile.readlines()
-
-				#Extract header and raw data
-				for m in range(0,HeaderIdx): Header.append(RawData[m])
-				RawData = RawData[HeaderIdx::]
-
-				#Read each row, split it (space delimited) and save.
-				for m in range(HeaderIdx,len(RawData)):
-					Row = RawData[m].split()
-					for n in range(0,len(Row)):
-						try: Row[n] = float(Row[n])
-						except: Row[n] = str(Row[n])
-					#endfor
-					OutputData.append(Row)
-				#endfor
-			#endif
-
-		#=====#
-
-		#If data is saved 'column-wise', transpose the arrays to correct.
-		elif Orientation == 'CSV':
-			#Determine dimensionality of profile.
-			if Dimension in ['1D','2D']:
-				#Read in 2D data from ASCII formatted file.
-				datafile = open(Filename)
-				RawData = datafile.readlines()
-
-				#Extract header and raw data
-				for m in range(0,HeaderIdx): Header.append(RawData[m])
-				RawData = RawData[HeaderIdx::]
-
-				#Enlarge output data array by number of columns
-				NumColumns = len(RawData[HeaderIdx+1].split())
-				for m in range(0,NumColumns):
-					OutputData.append(list())
-				#endfor
-
-				#Read each row, split it and save into relevant column of output data.
-				for i in range(HeaderIdx,len(RawData)):
-					Row = RawData[i].split()
-					for j in range(0,len(Row)):
-						try: Row[j] = float(Row[j])
-						except: Row[j] = str(Row[j])
-					#endfor
-					for k in range(0,NumColumns):
-						OutputData[k].append(Row[k])
-					#endfor
-				#endfor
-			#endif
-		#endif
-
-		#Orientation doesn't matter if 0D (scalar data).
-		elif Dimension == '0D':
-			#Read in 0D data from ASCII formatted file.
-			datafile = open(Filename)
-
-			for m in range(0,HeaderIdx): Header.append(RawData[m])
-			RawData = datafile.readlines()[HeaderIdx::]
-			Row = RawData.split()
-
-			for m in range(0,len(Row)):
-				OutputData.append(float(Row[m]))
-			#endfor
-		#endif
-
-		return(OutputData,Header)
-	#enddef
-
 
 	#Creates a new folder if one does not already exist.
 	#Takes destination dir and namestring, returns new directory.
@@ -4259,7 +4128,8 @@ def run(argv=None):
 					# Write Sheath Data separately as it is not included in the VariableList format
 					if image_plotsheath in ['Radial','Axial'] and i == len(VariableIndices)-1:
 						np.savetxt(CSVFilename, [p for p in zip(SxAxis,Sx)], delimiter=',', fmt='%s')
-						WriteDataToFile(Sx, CSVDir+'Sx.csv')
+						write_data_to_file(Sx, CSVDir + 'Sx.csv',
+										   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
 					#endif
 				#endif
 
@@ -4268,9 +4138,11 @@ def run(argv=None):
 				# Write data to ASCII files [OUTDATED FORMAT, TO BE REMOVED]
 				if write_ASCII == True:
 					DirWrite = CreateNewFolder(Dir2Dplots, '2DPlots_Data')
-					WriteDataToFile(Image, DirWrite+VariableStrings[i])
+					write_data_to_file(Image, DirWrite + VariableStrings[i],
+									   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
 					if image_plotsheath in ['Radial','Axial'] and i == len(VariableIndices)-1:
-						WriteDataToFile(Sx, DirWrite+'Sx-EXT')
+						write_data_to_file(Sx, DirWrite + 'Sx-EXT',
+										   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
 					#endif
 				#endif
 
@@ -4403,7 +4275,8 @@ def run(argv=None):
 						# Write Sheath Data separately as it is not included in the VariableList format
 						if image_plotsheath in ['Radial','Axial'] and i == len(VariableIndices)-1:
 							np.savetxt(CSVFilename, [p for p in zip(SxAxis,Sx)], delimiter=',', fmt='%s')
-							WriteDataToFile(Sx, CSVDir+'Sx.csv')
+							write_data_to_file(Sx, CSVDir + 'Sx.csv',
+											   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
 						#endif
 					#endif
 
@@ -4413,9 +4286,11 @@ def run(argv=None):
 					if write_ASCII == True:
 						DirWrite = CreateNewFolder(DirMovieicp, '2DPlots_Data')
 						DirWriteVar = CreateNewFolder(DirWrite, VariableStrings[i]+'_Data')
-						WriteDataToFile(Image, DirWriteVar+VariableStrings[i]+'_'+str(IterArray[k]).zfill(4))
+						write_data_to_file(Image, DirWriteVar + VariableStrings[i] + '_' + str(IterArray[k]).zfill(4),
+										   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
 						if image_plotsheath in ['Radial','Axial'] and k == len(VariableIndices)-1:
-							WriteDataToFile(Sx, DirWriteVar+'Sx-EXT')
+							write_data_to_file(Sx, DirWriteVar + 'Sx-EXT',
+											   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
 						#endif
 					#endif
 				#endfor
@@ -4568,7 +4443,8 @@ def run(argv=None):
 						if write_ASCII == True:
 							SaveString = '_R='+str(round((radialprofiles[j])*dz[l], 2))+'cm'
 							DirWrite = CreateNewFolder(DirRlineouts, 'Radial_Data')
-							WriteDataToFile([Raxis,Rlineout], DirWrite+VariableStrings[i]+SaveString)
+							write_data_to_file([Raxis, Rlineout], DirWrite + VariableStrings[i] + SaveString,
+											   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
 						#endif
 					#endfor
 
@@ -4639,7 +4515,8 @@ def run(argv=None):
 						if write_ASCII == True:
 							SaveString = '_Z='+str(round((axialprofiles[j])*dr[l], 2))+'cm'
 							DirWrite = CreateNewFolder(DirZlineouts, 'Axial_Data')
-							WriteDataToFile([Zaxis,Zlineout[::-1]], DirWrite+VariableStrings[i]+SaveString)
+							write_data_to_file([Zaxis, Zlineout[::-1]], DirWrite + VariableStrings[i] + SaveString,
+											   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
 						#endif
 					#endfor
 
@@ -4738,9 +4615,11 @@ def run(argv=None):
 						if l == 0:
 							WriteFolder = 'Z='+str(round((radialprofiles[j])*dz[l], 1))+'cm_Data'
 							DirWrite = CreateNewFolder(DirComparisons, WriteFolder)
-							WriteDataToFile(Raxis+['\n'], DirWrite+VariableStrings[k], 'w')
+							write_data_to_file(Raxis + ['\n'], DirWrite + VariableStrings[k], 'w',
+											   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
 						#endif
-						WriteDataToFile(RProfile+['\n'], DirWrite+VariableStrings[k], 'a')
+						write_data_to_file(RProfile + ['\n'], DirWrite + VariableStrings[k], 'a',
+										   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
 					#endif
 
 					#Apply image options and axis labels.
@@ -4801,9 +4680,11 @@ def run(argv=None):
 						if l == 0:
 							WriteFolder = 'R='+str(round((axialprofiles[j])*dr[l], 1))+'cm_Data'
 							DirWrite = CreateNewFolder(DirComparisons, WriteFolder)
-							WriteDataToFile(Zaxis+['\n'], DirWrite+VariableStrings[k], 'w')
+							write_data_to_file(Zaxis + ['\n'], DirWrite + VariableStrings[k], 'w',
+											   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
 						#endif
-						WriteDataToFile(ZProfile[::-1]+['\n'], DirWrite+VariableStrings[k], 'a')
+						write_data_to_file(ZProfile[::-1] + ['\n'], DirWrite + VariableStrings[k], 'a',
+										   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
 					#endif
 
 					#Apply image options and axis labels.
@@ -5029,7 +4910,8 @@ def run(argv=None):
 								SaveString1 = '_R='+str(round((radialprofiles[j])*dz[l], 2))+'cm'
 								SaveString2 = '_'+str(IterArray[k]).zfill(4)
 								SaveString = SaveString1+SaveString2
-								WriteDataToFile([Raxis,Rlineout], DirWrite+VariableStrings[i]+SaveString, 'w')
+								write_data_to_file([Raxis, Rlineout], DirWrite + VariableStrings[i] + SaveString, 'w',
+												   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
 							#endif
 						#endfor
 
@@ -5103,7 +4985,8 @@ def run(argv=None):
 								SaveString1 = '_R='+str(round((axialprofiles[j])*dr[l], 2))+'cm'
 								SaveString2 = '_'+str(IterArray[k]).zfill(4)
 								SaveString = SaveString1+SaveString2
-								WriteDataToFile([Zaxis,Zlineout], DirWrite+VariableStrings[i]+SaveString, 'w')
+								write_data_to_file([Zaxis, Zlineout], DirWrite + VariableStrings[i] + SaveString, 'w',
+												   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
 							#endif
 						#endfor
 
@@ -5223,8 +5106,10 @@ def run(argv=None):
 				# Write data to ASCII files if requested.
 				if write_ASCII == True:
 					DirWrite = CreateNewFolder(DirMeshAve, '1DTimeAxis_Data')
-					WriteDataToFile(Xaxis, DirWrite+VariableStrings[i], 'w')
-					WriteDataToFile(['\n']+TemporalProfile, DirWrite+VariableStrings[i], 'a')
+					write_data_to_file(Xaxis, DirWrite + VariableStrings[i], 'w',
+									   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
+					write_data_to_file(['\n'] + TemporalProfile, DirWrite + VariableStrings[i], 'a',
+									   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
 				#endif
 			#endfor
 
@@ -5525,10 +5410,13 @@ def run(argv=None):
 				if write_ASCII == True:
 					if i == 0:
 						DirASCII = CreateNewFolder(DirIEDF, 'EDF_Data')
-						WriteDataToFile(eVaxis, DirASCII+VariableStrings[i],'w')
+						write_data_to_file(eVaxis, DirASCII + VariableStrings[i], 'w',
+										   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
 					#endif
-					WriteDataToFile(EDFImage, DirASCII+VariableStrings[i]+'_IEDFAngular','w')
-					WriteDataToFile(EDFprofile, DirASCII+VariableStrings[i]+'_IEDFProfile','w')
+					write_data_to_file(EDFImage, DirASCII + VariableStrings[i] + '_IEDFAngular', 'w',
+									   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
+					write_data_to_file(EDFprofile, DirASCII + VariableStrings[i] + '_IEDFProfile', 'w',
+									   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
 				#endif
 			#endfor
 		#endfor
@@ -5753,10 +5641,14 @@ def run(argv=None):
 					DirASCII = CreateNewFolder(DirTrends,'Trend_Data')
 					DirASCIIIEDF = CreateNewFolder(DirASCII,'IEDF_Data')
 				#endif
-				WriteDataToFile(Legendlist+['\n']+Total_eV, DirASCIIIEDF+VariableStrings[i]+'_Total', 'w')
-				WriteDataToFile(Legendlist+['\n']+Range_eV, DirASCIIIEDF+VariableStrings[i]+'_Range', 'w')
-				WriteDataToFile(Legendlist+['\n']+Mode_eV, DirASCIIIEDF+VariableStrings[i]+'_Mode', 'w')
-				WriteDataToFile(Legendlist+['\n']+Mean_eV, DirASCIIIEDF+VariableStrings[i]+'_Mean', 'w')
+				write_data_to_file(Legendlist + ['\n'] + Total_eV, DirASCIIIEDF + VariableStrings[i] + '_Total', 'w',
+								   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
+				write_data_to_file(Legendlist + ['\n'] + Range_eV, DirASCIIIEDF + VariableStrings[i] + '_Range', 'w',
+								   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
+				write_data_to_file(Legendlist + ['\n'] + Mode_eV, DirASCIIIEDF + VariableStrings[i] + '_Mode', 'w',
+								   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
+				write_data_to_file(Legendlist + ['\n'] + Mean_eV, DirASCIIIEDF + VariableStrings[i] + '_Mean', 'w',
+								   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
 			#endif
 
 			##IEDF PROFILES##
@@ -5923,9 +5815,11 @@ def run(argv=None):
 					if j == 0:
 						DirASCII = CreateNewFolder(DirTrends,'Trend_Data')
 						DirASCIIAxial = CreateNewFolder(DirASCII,'Axial_Data')
-						WriteDataToFile(Xaxis+['\n'], DirASCIIAxial+VariableStrings[k]+'_Trends', 'w')
+						write_data_to_file(Xaxis + ['\n'], DirASCIIAxial + VariableStrings[k] + '_Trends', 'w',
+										   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
 					#endif
-					WriteDataToFile(Trend+['\n'], DirASCIIAxial+VariableStrings[k]+'_Trends', 'a')
+					write_data_to_file(Trend + ['\n'], DirASCIIAxial + VariableStrings[k] + '_Trends', 'a',
+									   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
 				#endif
 
 			#Save one image per variable with data from all simulations.
@@ -5984,9 +5878,11 @@ def run(argv=None):
 					if j == 0:
 						DirASCII = CreateNewFolder(DirTrends,'Trend_Data')
 						DirASCIIRadial = CreateNewFolder(DirASCII,'Radial_Data')
-						WriteDataToFile(Xaxis+['\n'], DirASCIIRadial+VariableStrings[k]+'_Trends', 'w')
+						write_data_to_file(Xaxis + ['\n'], DirASCIIRadial + VariableStrings[k] + '_Trends', 'w',
+										   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
 					#endif
-					WriteDataToFile(Trend+['\n'], DirASCIIRadial+VariableStrings[k]+'_Trends', 'a')
+					write_data_to_file(Trend + ['\n'], DirASCIIRadial + VariableStrings[k] + '_Trends', 'a',
+									   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
 				#endif
 
 			#Save one image per variable with data from all simulations.
@@ -6069,7 +5965,8 @@ def run(argv=None):
 		if write_ASCII == True:
 			DirASCII = CreateNewFolder(DirTrends,'Trend_Data')
 			DCASCII = [Xaxis,DCbias]
-			WriteDataToFile(DCASCII, DirASCII+'DCbias_Trends')
+			write_data_to_file(DCASCII, DirASCII + 'DCbias_Trends',
+							   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
 		#endif
 
 		#Plot and beautify the DCbias, applying normalization if requested.
@@ -6199,7 +6096,8 @@ def run(argv=None):
 		if write_ASCII == True:
 			DirASCII, TotalPowerASCII = CreateNewFolder(DirTrends,'Trend_Data'), [Xaxis]
 			for k in range(0,len(RequestedPowers)): TotalPowerASCII.append(Powers[k])
-			WriteDataToFile(TotalPowerASCII, DirASCII+'RFPower_Trends')
+			write_data_to_file(TotalPowerASCII, DirASCII + 'RFPower_Trends',
+							   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
 		#endif
 
 		#Plot a comparison of all power depositions requested.
@@ -6423,9 +6321,12 @@ def run(argv=None):
 			#Write data to ASCII format datafile if requested.
 			if write_ASCII == True:
 				DirASCII = CreateNewFolder(DirTrends,'Trend_Data')
-				WriteDataToFile(Xaxis+['\n'], DirASCII+'Thrust_Trends','w')
-				WriteDataToFile(Thrustlist+['\n'], DirASCII+'Thrust_Trends','a')
-				WriteDataToFile(ThrustIsplist, DirASCII+'Thrust_Trends','a')
+				write_data_to_file(Xaxis + ['\n'], DirASCII + 'Thrust_Trends', 'w',
+								   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
+				write_data_to_file(Thrustlist + ['\n'], DirASCII + 'Thrust_Trends', 'a',
+								   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
+				write_data_to_file(ThrustIsplist, DirASCII + 'Thrust_Trends', 'a',
+								   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
 			#endif
 
 			#=====#=====#
@@ -6533,9 +6434,12 @@ def run(argv=None):
 		#Write trend data to ASCII format datafile if requested.
 		if write_ASCII == True:
 			DirASCII = CreateNewFolder(DirTrends,'Trend_Data')
-			WriteDataToFile(Xaxis, DirASCII+'Sx-Avg_Trends','w')
-			WriteDataToFile('\n', DirASCII+'Sx-Avg_Trends','w')
-			WriteDataToFile(SxMaxExtent, DirASCII+'Sx-Avg_Trends','a')
+			write_data_to_file(Xaxis, DirASCII + 'Sx-Avg_Trends', 'w',
+							   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
+			write_data_to_file('\n', DirASCII + 'Sx-Avg_Trends', 'w',
+							   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
+			write_data_to_file(SxMaxExtent, DirASCII + 'Sx-Avg_Trends', 'a',
+							   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
 		#endif
 
 		#Generate figure and plot trends.
@@ -6616,7 +6520,8 @@ def run(argv=None):
 				#Write image data to ASCII format datafile if requested.
 				if write_ASCII == True:
 					DirASCII = CreateNewFolder(Dir2Dplots,'2DPlots_Data')
-					WriteDataToFile(Image, DirASCII+'Kn','w')
+					write_data_to_file(Image, DirASCII + 'Kn', 'w',
+									   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
 				#endif
 
 				#Label and save the 2D Plots.
@@ -6641,9 +6546,12 @@ def run(argv=None):
 			#Write trend data to ASCII format datafile if requested.
 			if write_ASCII == True:
 				DirASCII = CreateNewFolder(DirTrends,'Trend_Data')
-				WriteDataToFile(Xaxis, DirASCII+'Kn_Trends','w')
-				WriteDataToFile('\n', DirASCII+'Kn_Trends','w')
-				WriteDataToFile(KnudsenAverage, DirASCII+'Kn_Trends','a')
+				write_data_to_file(Xaxis, DirASCII + 'Kn_Trends', 'w',
+								   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
+				write_data_to_file('\n', DirASCII + 'Kn_Trends', 'w',
+								   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
+				write_data_to_file(KnudsenAverage, DirASCII + 'Kn_Trends', 'a',
+								   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
 			#endif
 
 			#Plot a comparison of all average Knudsen numbers.
@@ -6730,7 +6638,8 @@ def run(argv=None):
 				#Write image data to ASCII format datafile if requested.
 				if write_ASCII == True:
 					DirASCII = CreateNewFolder(Dir2Dplots,'2DPlots_Data')
-					WriteDataToFile(Image, DirASCII+'Cs','w')
+					write_data_to_file(Image, DirASCII + 'Cs', 'w',
+									   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
 				#endif
 
 				#Label and save the 2D Plots.
@@ -6756,9 +6665,12 @@ def run(argv=None):
 			#Write trend data to ASCII format datafile if requested.
 			if write_ASCII == True:
 				DirASCII = CreateNewFolder(DirTrends,'Trend_Data')
-				WriteDataToFile(Xaxis, DirASCII+'Cs_Trends','w')
-				WriteDataToFile('\n', DirASCII+'Cs_Trends','w')
-				WriteDataToFile(AverageSoundSpeed, DirASCII+'Cs_Trends','a')
+				write_data_to_file(Xaxis, DirASCII + 'Cs_Trends', 'w',
+								   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
+				write_data_to_file('\n', DirASCII + 'Cs_Trends', 'w',
+								   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
+				write_data_to_file(AverageSoundSpeed, DirASCII + 'Cs_Trends', 'a',
+								   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
 			#endif
 
 			#Plot a comparison of all average Knudsen numbers.
@@ -6914,7 +6826,8 @@ def run(argv=None):
 					ASCIIWaveforms.append(VoltageWaveforms[j])
 				#endfor
 				DirASCIIPhase = CreateNewFolder(Dirphaseresolved,'1DPhase_Data')
-				WriteDataToFile(ASCIIWaveforms, DirASCIIPhase+'VoltageWaveforms')
+				write_data_to_file(ASCIIWaveforms, DirASCIIPhase + 'VoltageWaveforms',
+								   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
 			#endif
 
 			#==============#
@@ -7053,7 +6966,8 @@ def run(argv=None):
 							DirASCIIPhaseloc = CreateNewFolder(DirASCIIPhase,ProfileString[3:-2])
 							Cycle = str( Phaselist[j].replace(" ", "") )
 							SaveString = DirASCIIPhaseloc+VariableStrings[i]+'_'+Cycle
-							WriteDataToFile(phaseresolvedProfile[::-1], SaveString)
+							write_data_to_file(phaseresolvedProfile[::-1], SaveString,
+											   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
 						#endif
 					#endfor
 
@@ -7163,7 +7077,8 @@ def run(argv=None):
 						ASCIIWaveforms.append(VoltageWaveforms[j])
 					#endfor
 					DirASCIIPhase = CreateNewFolder(Dirphaseresolved,'2DPhase_Data')
-					WriteDataToFile(ASCIIWaveforms, DirASCIIPhase+'VoltageWaveforms')
+					write_data_to_file(ASCIIWaveforms, DirASCIIPhase + 'VoltageWaveforms',
+									   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
 				#endif
 			#endif
 			fig,ax = figure(image_aspectratio,1)
@@ -7341,7 +7256,8 @@ def run(argv=None):
 						DirASCIIPhaseVar = CreateNewFolder(DirASCIIPhase,VariableStrings[i])
 						Cycle = str( Phaselist[j].replace(" ", "") )
 						SaveString = DirASCIIPhaseVar+VariableStrings[i]+'_'+Cycle
-						WriteDataToFile(Image, SaveString)
+						write_data_to_file(Image, SaveString,
+										   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
 					#endif
 				#endfor
 
@@ -7502,7 +7418,8 @@ def run(argv=None):
 			if write_ASCII == True:
 				DirASCII = CreateNewFolder(Dirphaseresolved,'2DPhase_Data')
 				DirASCIISheath = CreateNewFolder(DirASCII,'SheathDynamics')
-				WriteDataToFile(Phaseaxis+['\n']+SxLoc, DirASCIISheath+VariedValuelist[l]+'SheathDynamics')
+				write_data_to_file(Phaseaxis + ['\n'] + SxLoc, DirASCIISheath + VariedValuelist[l] + 'SheathDynamics',
+								   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
 			#endif
 		#endfor
 
@@ -7510,11 +7427,16 @@ def run(argv=None):
 		if write_ASCII == True:
 			DirASCII = CreateNewFolder(DirTrends,'Trend_Data')
 			DirASCIISheath = CreateNewFolder(DirASCII,'Sheath_Data')
-			WriteDataToFile(VariedValuelist+['\n']+SxMaxExtTrend, DirASCIISheath+'MaxExtent_Trends')
-			WriteDataToFile(VariedValuelist+['\n']+SxMeanExtTrend, DirASCIISheath+'MeanExtent_Trends')
-			WriteDataToFile(VariedValuelist+['\n']+SxDynRangeTrend, DirASCIISheath+'DynamicRange_Trends')
-			WriteDataToFile(VariedValuelist+['\n']+SxMaxVelTrend, DirASCIISheath+'MaxVelocity_Trends')
-			WriteDataToFile(VariedValuelist+['\n']+SxMeanVelTrend, DirASCIISheath+'MeanVelocity_Trends')
+			write_data_to_file(VariedValuelist + ['\n'] + SxMaxExtTrend, DirASCIISheath + 'MaxExtent_Trends',
+							   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
+			write_data_to_file(VariedValuelist + ['\n'] + SxMeanExtTrend, DirASCIISheath + 'MeanExtent_Trends',
+							   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
+			write_data_to_file(VariedValuelist + ['\n'] + SxDynRangeTrend, DirASCIISheath + 'DynamicRange_Trends',
+							   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
+			write_data_to_file(VariedValuelist + ['\n'] + SxMaxVelTrend, DirASCIISheath + 'MaxVelocity_Trends',
+							   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
+			write_data_to_file(VariedValuelist + ['\n'] + SxMeanVelTrend, DirASCIISheath + 'MeanVelocity_Trends',
+							   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
 		#endif
 
 
@@ -7664,7 +7586,8 @@ def run(argv=None):
 					ASCIIWaveforms.append(VoltageWaveforms[j])
 				#endfor
 				DirASCIIPROES = CreateNewFolder(DirPROES,'PROES_Data')
-				WriteDataToFile(ASCIIWaveforms, DirASCIIPROES+'VoltageWaveforms')
+				write_data_to_file(ASCIIWaveforms, DirASCIIPROES + 'VoltageWaveforms',
+								   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
 			#endif
 
 			#==============#
@@ -7822,7 +7745,8 @@ def run(argv=None):
 					if write_ASCII == True:
 						DirASCIIPROES = CreateNewFolder(DirPROES,'PROES_Data')
 						DirASCIIPROESloc = CreateNewFolder(DirASCIIPROES,ProfileString[3::])
-						WriteDataToFile(PROES, DirASCIIPROESloc+varlist[i]+'_PROES')
+						write_data_to_file(PROES, DirASCIIPROESloc + varlist[i] + '_PROES',
+										   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
 					#endif
 
 					#==============##==============#

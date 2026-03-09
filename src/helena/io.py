@@ -164,3 +164,140 @@ def read_from_csv(directory, filename, mode="r", cycle=0):
             data.append(split_row)
 
     return data, header
+
+
+def write_data_to_file(
+    data, filename, structure="w", *, R_mesh_i, dr_i, Z_mesh_i, dz_i
+):
+    # Takes a 1D or 2D array and writes to a datafile in ASCII format.
+    # Three imputs, Data to be written, Filename, 'w'rite or 'a'ppend.
+    # Data is written orientated as plotted (i.e. j=z=0 is zero at origin)
+    # WriteDataToFile(Image, FolderNameTrimmer(Dirlist[l])+VariableStrings[k])
+
+    # Determine dimensionality of profile.
+    if isinstance(data[0], (list, np.ndarray)):
+        datafile = open(filename, structure)
+
+        # Write array length and SI dimension to file
+        datafile.write(
+            "R_Mesh [Cells] " + str(R_mesh_i) + "  :: dR [cm/cell] " + str(dr_i)
+        )
+        datafile.write("\n")
+        datafile.write(
+            "Z_Mesh [Cells] " + str(Z_mesh_i) + "  :: dZ [cm/cell] " + str(dz_i)
+        )
+        datafile.write("\n")
+
+        # Write 2D array of data to file
+        for m in range(0, len(data)):
+            for n in range(0, len(data[m])):
+                datafile.write(str(data[m][n]))
+                datafile.write(" ")
+            # endfor
+            datafile.write("\n")
+        # endfor
+        datafile.close()
+
+    # Lowest dimention is scalar: ==> 1D array.
+    elif isinstance(data, (list, np.ndarray)):
+        datafile = open(filename, structure)
+
+        # Write array length and SI dimension to file
+        if len(data) == R_mesh_i:
+            datafile.write(
+                "R_Mesh [cells] " + str(R_mesh_i) + "  :: dR [cm/cell] " + str(dr_i)
+            )
+            datafile.write("\n")
+        if len(data) == Z_mesh_i:
+            datafile.write(
+                "Z_Mesh [cells] " + str(Z_mesh_i) + "  :: dZ [cm/cell] " + str(dz_i)
+            )
+            datafile.write("\n")
+        # endif
+
+        # Write 1D array of data to file
+        for n in range(0, len(data)):
+            datafile.write(str(data[n]))
+            datafile.write(" ")
+        datafile.close()
+
+    return ()
+
+
+def read_data_from_file(filename, header_idx=0, dimension="2D", orientation="CSV"):
+    # Reads 1D or 2D data from textfile in ASCII format, returns data and header.
+    # Input filename, header length, data dimension and orientation (CSV or RSV).
+    # Example: OutputData,Header = ReadDataFromFile('/Data.txt', 1, '2D', CSV)
+
+    output_data, header = [], []
+
+    # If data is saved 'Row-wise', use default readin routine.
+    if orientation == "RSV":
+        # Determine dimensionality of profile.
+        if dimension in ["1D", "2D"]:
+            # Read in 2D data from ASCII formatted file.
+            datafile = open(filename)
+            raw_data = datafile.readlines()
+
+            # Extract header and raw data
+            for m in range(0, header_idx):
+                header.append(raw_data[m])
+            raw_data = raw_data[header_idx::]
+
+            # Read each row, split it (space delimited) and save.
+            for m in range(header_idx, len(raw_data)):
+                row = raw_data[m].split()
+                for n in range(0, len(row)):
+                    try:
+                        row[n] = float(row[n])
+                    except:
+                        row[n] = str(row[n])
+
+                output_data.append(row)
+
+    # =====#
+
+    # If data is saved 'column-wise', transpose the arrays to correct.
+    elif orientation == "CSV":
+        # Determine dimensionality of profile.
+        if dimension in ["1D", "2D"]:
+            # Read in 2D data from ASCII formatted file.
+            datafile = open(filename)
+            raw_data = datafile.readlines()
+
+            # Extract header and raw data
+            for m in range(0, header_idx):
+                header.append(raw_data[m])
+            raw_data = raw_data[header_idx::]
+
+            # Enlarge output data array by number of columns
+            num_columns = len(raw_data[header_idx + 1].split())
+            for m in range(0, num_columns):
+                output_data.append([])
+
+            # Read each row, split it and save into relevant column of output data.
+            for i in range(header_idx, len(raw_data)):
+                row = raw_data[i].split()
+                for j in range(0, len(row)):
+                    try:
+                        row[j] = float(row[j])
+                    except:
+                        row[j] = str(row[j])
+                # endfor
+                for k in range(0, num_columns):
+                    output_data[k].append(row[k])
+
+    # Orientation doesn't matter if 0D (scalar data).
+    elif dimension == "0D":
+        # Read in 0D data from ASCII formatted file.
+        datafile = open(filename)
+
+        for m in range(0, header_idx):
+            header.append(raw_data[m])
+        raw_data = datafile.readlines()[header_idx::]
+        row = raw_data.split()
+
+        for m in range(0, len(row)):
+            output_data.append(float(row[m]))
+
+    return output_data, header
