@@ -23,6 +23,7 @@
 from pylab import *
 from .io import get_directories
 from .initialisation import get_mesh_and_SI
+from .data import extract_raw_data
 from .variables import enumerate_variables, enumerate_vectors, variable_interpolator, variable_unit_conversion, azimuthal_phase_conversion
 from .utility import string_in_variable
 
@@ -612,23 +613,6 @@ def run(argv=None):
 					#UNPACKING AND ORGANIZATION OF DATA#
 	#====================================================================#
 
-	#Takes full directory list (Dir) and data filename type (e.g. .png, .txt)
-	#Returns row-wise list of data and length of datafile.
-	#rawdata, datalength = ExtractRawData(Dir,'.dat',l)
-	def ExtractRawData(Dir,NameString,ListIndex):
-		try:
-			DataFileDir = filter(lambda x: NameString in x, Dir)
-			DataFileDir = sorted(DataFileDir)
-			Rawdata = open(DataFileDir[ListIndex]).readlines()
-			nn_data = len(Rawdata)
-		except:
-			print( 'Unable to extract '+str(NameString))
-			exit()
-		#endtry
-		return(Rawdata,nn_data)
-	#enddef
-
-
 	#Takes ASCII data in 2/3D format and converts to HELENA friendly structure.
 	#Requires rawdata(2D/3D), header and variable number and mesh dimensions.
 	#Allows for an optional offset in 'starting' variable number.
@@ -687,8 +671,8 @@ def run(argv=None):
 	#Data,Phaselist = ReadTEC2DPhase(folder=l,Variables=PhaseVariables)
 	def ReadTEC2DPhase(folder,Variables=PhaseVariables):
 		#Load data from movie1 file and unpack into 1D array.
-		try: 	rawdata,filelength = ExtractRawData(Dir,movie1[l].split('/')[-1],folder)
-		except: rawdata,filelength = ExtractRawData(Dir,'movie1.pdt',folder)
+		try: 	rawdata,filelength = extract_raw_data(Dir, movie1[l].split('/')[-1], folder)
+		except: rawdata,filelength = extract_raw_data(Dir, 'movie1.pdt', folder)
 
 		#Read through all variables for each file and stop when list ends.
 		#Movie1 has geometry at top, therefore len(header) != len(variables).
@@ -2323,8 +2307,8 @@ def run(argv=None):
 	for l in tqdm(range(0,numfolders)):
 
 		#Load data from TECPLOT2D file and unpack into 1D array.
-		try: rawdata, nn_2D = ExtractRawData(Dir,TEC2D[l].split('/')[-1],l)
-		except: rawdata, nn_2D = ExtractRawData(Dir,'TECPLOT2D.PDT',l)
+		try: rawdata, nn_2D = extract_raw_data(Dir, TEC2D[l].split('/')[-1], l)
+		except: rawdata, nn_2D = extract_raw_data(Dir, 'TECPLOT2D.PDT', l)
 		rawdata_2D.append(rawdata)
 
 		#Read through all variables for each file and stop when list ends.
@@ -2396,8 +2380,8 @@ def run(argv=None):
 		if True in [savefig_sheathdynamics,savefig_phaseresolve1D,savefig_phaseresolve2D,savefig_PROES]:
 
 			#Load data from movie_icp file and unpack into 1D array.
-			try: rawdata, nn_movie1 = ExtractRawData(Dir,movie1[l].split('/')[-1],l)
-			except: rawdata, nn_movie1 = ExtractRawData(Dir,'movie1.pdt',l)
+			try: rawdata, nn_movie1 = extract_raw_data(Dir, movie1[l].split('/')[-1], l)
+			except: rawdata, nn_movie1 = extract_raw_data(Dir, 'movie1.pdt', l)
 			rawdata_phasemovie.append(rawdata)
 
 			#Read through all variables for each file and stop when list ends.
@@ -2438,8 +2422,8 @@ def run(argv=None):
 		if True in [savefig_movieicp2D,savefig_timeaxis1D,savefig_movieicp1D,savefig_convergence]:
 
 			#Load data from movie_icp file and unpack into 1D array.
-			try: rawdata, nn_itermovie = ExtractRawData(Dir,movieicp[l].split('/')[-1],l)
-			except: rawdata, nn_itermovie = ExtractRawData(Dir,'movie_icp.pdt',l)
+			try: rawdata, nn_itermovie = extract_raw_data(Dir, movieicp[l].split('/')[-1], l)
+			except: rawdata, nn_itermovie = extract_raw_data(Dir, 'movie_icp.pdt', l)
 			rawdata_itermovie.append(rawdata)
 
 			#Read through all variables for each file and stop when list ends.
@@ -2567,8 +2551,8 @@ def run(argv=None):
 			AutoConvProf('./conv_prof.exe',Args,DirAdditions)
 
 			#Load data from IEDFprofile file and unpack into 1D array.
-			try: rawdata, nn_IEDF = ExtractRawData(Dir,iprofiletec2d[l].split('/')[-1],l)
-			except: rawdata, nn_IEDF = ExtractRawData(Dir,'iprofile_tec2d.pdt',l)
+			try: rawdata, nn_IEDF = extract_raw_data(Dir, iprofiletec2d[l].split('/')[-1], l)
+			except: rawdata, nn_IEDF = extract_raw_data(Dir, 'iprofile_tec2d.pdt', l)
 			rawdata_IEDF.append(rawdata)
 
 			#Read through all variables for each file and stop when list ends.
@@ -2611,8 +2595,8 @@ def run(argv=None):
 		if True in [savefig_EEDF]:
 
 			#Load data from MCS.PDT file and unpack into 1D array.
-			try: rawdata, nn_mcs = ExtractRawData(Dir,boltztec[l].split('/')[-1],l)
-			except: rawdata, nn_mcs = ExtractRawData(Dir,'boltz_tec.pdt',l)
+			try: rawdata, nn_mcs = extract_raw_data(Dir, boltztec[l].split('/')[-1], l)
+			except: rawdata, nn_mcs = extract_raw_data(Dir, 'boltz_tec.pdt', l)
 			rawdata_mcs.append(rawdata)
 
 			#Unpack each row of data points into single array of floats.
