@@ -23,7 +23,8 @@
 from pylab import *
 from .io import get_directories
 from .initialisation import get_mesh_and_SI
-from .data import enumerate_variables, enumerate_vectors
+from .data import enumerate_variables, enumerate_vectors, variable_interpolator, variable_unit_conversion
+from .utility import string_in_variable
 
 def run(argv=None):
 	from optparse import OptionParser
@@ -611,167 +612,6 @@ def run(argv=None):
 					#UNPACKING AND ORGANIZATION OF DATA#
 	#====================================================================#
 
-	#Identifies if variable exists in all simulations, rejects if not.
-	#Allows for the comparison of datasets with different icp.dat files.
-	#Takes VariableIndices, VariableStrings, globalMinSharedVariables
-	#Returns VariableIndices and VariableStrings with largest commonly shared variables.
-	#proclist,varlist = VariableInterpolator(VariableIndices,VariableStrings,MinSharedVariables):
-	def VariableInterpolator(VariableIndices,VariableStrings,MinSharedVariables):
-
-		#No interpolation needed if variable count is the same for all datasets.
-	#	if all(map(lambda x: x == Globalnumvars[0], Globalnumvars)) == True:		#Py2.x.x Lambda Method
-		if Globalnumvars.count(Globalnumvars[0]) == len(Globalnumvars):				#Py3.x.x Count Method
-			return(VariableIndices, VariableStrings)
-		#endif
-
-		#Identify elements in each VariableStrings which are not in the MinSharedVariables list
-		inter = set(MinSharedVariables).symmetric_difference(VariableStrings)
-		inter = list(inter)
-
-		#If at least one element not present in all folders, remove from lists to be plotted
-		if len(inter) != 0:
-			for i in range(0,len(inter)):
-				j = 0
-				while j < len(VariableStrings):
-					#Check for exact string match, e.g to avoid "AR in AR+".
-					if inter[i] == VariableStrings[j]:
-						del VariableStrings[j]
-						del VariableIndices[j]
-					else:
-						j += 1
-					#endif
-				#endwhile
-			#endfor
-		#endif
-
-		#Return lists to be plotted
-		return(VariableIndices, VariableStrings)
-	#enddef
-
-
-	#Converts units and direction (sign) for input 1D, 2D data arrays.
-	#Takes profile and variable name, returns profile in required SI unit.
-	#Implicitly calculates for common variables, explicitly for densities.
-	def VariableUnitConversion(profile,variable):
-
-		#For Pressures, convert to mTorr or Pa as requested, or retain as default Torr.
-		if IsStringInVariable(variable,['PRESSURE']) == True:
-			for i in range(0,len(profile)):
-				if Units == 'SI': 		profile[i] = profile[i]*133.333333333	#[Pa]
-				elif Units == 'CGS': 	profile[i] = profile[i]					#[Torr]
-			#endfor
-		#endif
-
-		#For ionisation rates, convert from [cm3 s-1] to [m3 s-1]
-		if IsStringInVariable(variable,['S-','SEB-','SRCE-']) == True:
-			for i in range(0,len(profile)):
-				if Units == 'SI': 		profile[i] = profile[i]*1.E6			#[m3 s-1]
-				elif Units == 'CGS': 	profile[i] = profile[i]					#[cm3 s-1]
-			#endfor
-		#endif
-
-		#For fluxes, convert from [cm-2] to [m-2]. (also reverse axial flux direction)
-		if IsStringInVariable(variable,['E FLUX-Z','E FLUX-R','FZ-','FR-']) == True:
-			for i in range(0,len(profile)):
-				if Units == 'SI': 		profile[i] = profile[i]*1.E4			#[m2 s-1]
-				elif Units == 'CGS': 	profile[i] = profile[i]					#[cm2 s-1]
-			#endfor
-		#endif
-		if IsStringInVariable(variable,['E FLUX-Z','FZ-']) == True:
-			for i in range(0,len(profile)):
-				profile[i] = profile[i]*(-1)
-			#endfor
-		#endif
-
-		#For velocities, convert from [cms-1] to [ms-1] or [kms-1]. (also reverse axial velocity)
-		if IsStringInVariable(variable,['VR-NEUTRAL','VZ-NEUTRAL']) == True:
-			for i in range(0,len(profile)):
-				if Units == 'SI': 		profile[i] = profile[i]*1.E-2			#[ms-1]
-				elif Units == 'CGS': 	profile[i] = profile[i]					#[cms-1]
-			#endfor
-		if IsStringInVariable(variable,['VR-ION+','VZ-ION+','VR-ION-','VZ-ION-']) == True:
-			for i in range(0,len(profile)):
-				if Units == 'SI': 		profile[i] = profile[i]*1.E-5			#[kms-1]
-				elif Units == 'CGS': 	profile[i] = profile[i]					#[cms-1]
-			#endfor
-		if IsStringInVariable(variable,['VZ-NEUTRAL','VZ-ION+','VZ-ION-']) == True:
-			for i in range(0,len(profile)):
-				profile[i] = profile[i]*(-1)
-			#endfor
-		#endif
-
-		#For B-field strengths, convert to Tesla or retain as default Gauss.
-		if IsStringInVariable(variable,['BR','BT','BZ','BRF','BTHETA']) == True:
-			for i in range(0,len(profile)):
-				if Units == 'SI': 		profile[i] = profile[i]					#[G]
-				elif Units == 'CGS':	profile[i] = profile[i]					#[G]
-			#endfor
-		#~~~ AXIAL MAGNETIC FIELD IS NOT REVERSED HERE - RM: NEED TO LOOK INTO THIS... ~~~#
-		if IsStringInVariable(variable,['BZ','BZS']) == True:
-			for i in range(0,len(profile)):
-				if Units == 'SI': 		profile[i] = profile[i]*(-1)			#[G]
-				elif Units == 'CGS':	profile[i] = profile[i]					#[G]
-			#endfor
-		#endif
-
-		#For E-field strengths, convert from [V cm-1] to [V m-1]. (also reverse axial field)
-		if IsStringInVariable(variable,['EF-TOT','EAMB-R','EAMB-Z','ERADIAL','ETHETA','EAXIAL']) == True:
-			for i in range(0,len(profile)):
-				if Units == 'SI': 		profile[i] = profile[i]*100.			#[V m-1]
-				elif Units == 'CGS': 	profile[i] = profile[i]					#[V cm-1]
-			#endfor
-		if IsStringInVariable(variable,['EAMB-Z']) == True:
-			for i in range(0,len(profile)):
-				profile[i] = profile[i]*(-1)
-			#endfor
-		#endif
-
-		#For surface charge, convert from [C cm-3] to [C m-3].
-		if IsStringInVariable(variable,['RHO']) == True:
-			for i in range(0,len(profile)):
-				if Units == 'SI': 		profile[i] = profile[i]*1.E6			#[C m-3]
-				elif Units == 'CGS': 	profile[i] = profile[i]					#[C cm-3]
-			#endfor
-
-		#For plasma conductivity, convert from [S cm-1] to [S m-1].
-		if IsStringInVariable(variable,['SIGMA']) == True:
-			for i in range(0,len(profile)):
-				if Units == 'SI': 		profile[i] = profile[i]*1.E2			#[S m-1]
-				elif Units == 'CGS': 	profile[i] = profile[i]					#[S cm-1]
-			#endfor
-
-		#For Current Densities, convert from [A cm-2] to [mA cm-2]. (also reverse axial current)
-		if IsStringInVariable(variable,['JZ-NET','JR-NET','J-THETA','J-TH(MAG)']) == True:
-			for i in range(0,len(profile)):
-				if Units == 'SI': 		profile[i] = profile[i]/1000.			#[A m-2]
-				elif Units == 'CGS': 	profile[i] = profile[i]					#[A cm-2]
-			#endfor
-		if IsStringInVariable(variable,['JZ-NET']) == True:
-			for i in range(0,len(profile)):
-				profile[i] = profile[i]*(-1)
-			#endfor
-		#endif
-
-		#For power densities, convert from [Wcm-3] to [Wm-3].
-		if IsStringInVariable(variable,['POW-ALL','POWALL','POW-TOT','POW-ICP','POWICP','POW-RF','POW-RF-E']) == True:
-			for i in range(0,len(profile)):
-				if Units == 'SI': 		profile[i] = profile[i]*1.E6			#[W m-3]
-				elif Units == 'CGS': 	profile[i] = profile[i]					#[W cm-3]
-			#endfor
-		#endif
-
-		#For densities, convert from [cm-3] to [m-3]. (AtomicSpecies is defined in icp.nam input)
-		if variable in AtomicSpecies or variable in [x.replace('^', '+') for x in AtomicSpecies]:
-			for i in range(0,len(profile)):
-				if Units == 'SI': 		profile[i] = profile[i]*1.E6			#[m-3]
-				elif Units == 'CGS': 	profile[i] = profile[i]					#[cm-3]
-			#endfor
-		#endif
-
-		return(profile)
-	#enddef
-
-
 	#Applies field phase to sign of field amplitude for azimuthal data arrays.
 	#Takes 1D, or 2D data profile and variable string.
 	#Returns data array multiplied by sin(phase).
@@ -784,11 +624,11 @@ def run(argv=None):
 		#=====#=====#
 
 		#Only Azimuthally varying fields require phase conversion
-		elif IsStringInVariable(variable,['ETHETA']) == True:
+		elif string_in_variable(variable, ['ETHETA']) == True:
 			phaseprocess,phasevariable = enumerate_variables(['PHASE'], Header_TEC2D[l])
-		elif IsStringInVariable(variable,['J-THETA']) == True:
+		elif string_in_variable(variable, ['J-THETA']) == True:
 			phaseprocess,phasevariable = enumerate_variables(['PHASE'], Header_TEC2D[l])
-		elif IsStringInVariable(variable,['J-TH(MAG)']) == True:
+		elif string_in_variable(variable, ['J-TH(MAG)']) == True:
 			phaseprocess,phasevariable = enumerate_variables(['J-TH(PHA)'], Header_TEC2D[l])
 		else:
 			return(profile)
@@ -913,7 +753,7 @@ def run(argv=None):
 		proclist,varlist = enumerate_variables(Variables, Header_movie1[folder])
 
 		#Interpolate variable lists for all folders to find minimum shared set
-		proclist,varlist = VariableInterpolator(proclist,varlist,MinSharedVariables)
+		proclist,varlist = variable_interpolator(proclist, varlist, MinSharedVariables, Globalnumvars)
 
 		#Rough method of obtaining the movie1.pdt cycle locations for data extraction.
 		cycleloc = list()
@@ -933,7 +773,7 @@ def run(argv=None):
 				PhaseData = ReadTEC2D(rawdata,cycleloc[i],numvar+2,offset=2)
 				#Convert data from CGS (HPEM DEFAULT) to user requested unit system
 				for j in range(0,len(Mov1VariableStrings)):
-					PhaseData[j] = VariableUnitConversion(PhaseData[j],Mov1VariableStrings[j])
+					PhaseData[j] = variable_unit_conversion(PhaseData[j], Mov1VariableStrings[j], Units, AtomicSpecies)
 	#				PhaseData[j] = AzimuthalPhaseConversion(PhaseData[j],Mov1VariableStrings[j])
 				#endfor
 				FolderData.append(PhaseData[0:numvar])
@@ -942,7 +782,7 @@ def run(argv=None):
 			elif i > 0:
 				PhaseData = ReadTEC2D(rawdata,cycleloc[i],numvar)
 				for j in range(0,len(Mov1VariableStrings)):
-					PhaseData[j] = VariableUnitConversion(PhaseData[j],Mov1VariableStrings[j])
+					PhaseData[j] = variable_unit_conversion(PhaseData[j], Mov1VariableStrings[j], Units, AtomicSpecies)
 	#				PhaseData[j] = AzimuthalPhaseConversion(PhaseData[j],Mov1VariableStrings[j])
 				#endfor
 				FolderData.append(PhaseData)
@@ -1498,27 +1338,11 @@ def run(argv=None):
 
 		#Return true if supplied variable is within list
 		IsRadial = False
-		if IsStringInVariable(variable,RadialVariableNames) == True:
+		if string_in_variable(variable, RadialVariableNames) == True:
 			IsRadial = True
 		#endif
 
 		return(IsRadial)
-	#enddef
-
-
-	#Takes array of strings and compares to variable string.
-	#Returns true if any element of stringarray is in variable.
-	def IsStringInVariable(variable,stringarray):
-
-		boolian = False
-		#Check if each element of string is inside variable.
-		for i in range(0,len(stringarray)):
-			if stringarray[i] in variable:
-				boolian = True
-			#endif
-		#endfor
-
-		return(boolian)
 	#enddef
 
 
@@ -1811,26 +1635,26 @@ def run(argv=None):
 				VariableUnit = LogString+'[s$^{-1}$]'
 
 			#Implicit Variables.
-			elif IsStringInVariable(VariableStrings[i],Ionisationlist) == True:
+			elif string_in_variable(VariableStrings[i], Ionisationlist) == True:
 				Variable = VariableStrings[i]
 				if Units=='SI': 	VariableUnit = LogString+'[m$^{-3}$s$^{-1}$]'
 				elif Units=='CGS':	VariableUnit = LogString+'[cm$^{-3}$s$^{-1}$]'
-			elif IsStringInVariable(VariableStrings[i],['SRCE-']) == True:
+			elif string_in_variable(VariableStrings[i], ['SRCE-']) == True:
 				Variable = VariableStrings[i]
 				if Units=='SI': 	VariableUnit = LogString+'[m$^{-3}$s$^{-1}$]'
 				elif Units=='CGS':	VariableUnit = LogString+'[cm$^{-3}$s$^{-1}$]'
-			elif IsStringInVariable(VariableStrings[i],['T-']) == True:
+			elif string_in_variable(VariableStrings[i], ['T-']) == True:
 				Variable = VariableStrings[i]
 				VariableUnit = '[K]'
-			elif IsStringInVariable(VariableStrings[i],Velocitylist) == True:
+			elif string_in_variable(VariableStrings[i], Velocitylist) == True:
 				Variable = VariableStrings[i]
 				if Units=='SI': 	VariableUnit = LogString+'[kms$^{-1}$]'
 				elif Units=='CGS':	VariableUnit = LogString+'[cms$^{-1}$]'
-			elif IsStringInVariable(VariableStrings[i],Fluxlist) == True:
+			elif string_in_variable(VariableStrings[i], Fluxlist) == True:
 				Variable = VariableStrings[i]
 				if Units=='SI': 	VariableUnit = LogString+'[m$^{-2}$s$^{-1}$]'
 				elif Units=='CGS':	VariableUnit = LogString+'[cm$^{-2}$s$^{-1}$]'
-			elif IsStringInVariable(VariableStrings[i],['POW-']) == True:
+			elif string_in_variable(VariableStrings[i], ['POW-']) == True:
 				Variable = VariableStrings[i]
 				if Units=='SI': 	VariableUnit = LogString+'[Wm$^{-3}$]'
 				elif Units=='CGS':	VariableUnit = LogString+'[Wcm$^{-3}$]'
@@ -2562,7 +2386,7 @@ def run(argv=None):
 
 		#Convert data from CGS (HPEM DEFAULT) to user requested unit system
 		for i in range(0,len(TEC2DVariableStrings)):
-			CurrentFolderData[i] = VariableUnitConversion(CurrentFolderData[i],TEC2DVariableStrings[i])
+			CurrentFolderData[i] = variable_unit_conversion(CurrentFolderData[i], TEC2DVariableStrings[i], Units, AtomicSpecies)
 	#		CurrentFolderData[i] = AzimuthalPhaseConversion(CurrentFolderData[i],TEC2DVariableStrings[i])
 		#endfor
 
@@ -2598,7 +2422,7 @@ def run(argv=None):
 	#
 	#		#Convert data from CGS (HPEM DEFAULT) to user requested unit system						!!! Not tested
 	#		for i in range(0,len(KinVariableStrings)):
-	#			CurrentFolderData[i] = VariableUnitConversion(CurrentFolderData[i],KinVariableStrings[i])
+	#			CurrentFolderData[i] = VariableUnitConversion(CurrentFolderData[i],KinVariableStrings[i], Units, AtomicSpecies)
 	#			CurrentFolderData[i] = AzimuthalPhaseConversion(CurrentFolderData[i],KinVariableStrings[i])
 	#		#endfor
 	#
@@ -2715,7 +2539,7 @@ def run(argv=None):
 
 					#Convert data from CGS (HPEM DEFAULT) to user requested unit system
 					for j in range(0,len(MovIcpVariableStrings)):
-						CurrentIterData[j] = VariableUnitConversion(CurrentIterData[j],MovIcpVariableStrings[j])
+						CurrentIterData[j] = variable_unit_conversion(CurrentIterData[j], MovIcpVariableStrings[j], Units, AtomicSpecies)
 	#					CurrentIterData[j] = AzimuthalPhaseConversion(CurrentIterData[j],MovIcpVariableStrings[j])
 					#endfor
 
@@ -2745,7 +2569,7 @@ def run(argv=None):
 
 					#Convert data from CGS (HPEM DEFAULT) to user requested unit system
 					for j in range(0,len(MovIcpVariableStrings)):
-						CurrentIterData[j] = VariableUnitConversion(CurrentIterData[j],MovIcpVariableStrings[j])
+						CurrentIterData[j] = variable_unit_conversion(CurrentIterData[j], MovIcpVariableStrings[j], Units, AtomicSpecies)
 	#					CurrentIterData[j] = AzimuthalPhaseConversion(CurrentIterData[j],MovIcpVariableStrings[j])
 					#endfor
 
@@ -2813,7 +2637,7 @@ def run(argv=None):
 
 			#Convert data from CGS (HPEM DEFAULT) to user requested unit system							!!! Not tested
 			for i in range(0,len(IEDFVariableStrings)):
-				CurrentFolderData[i] = VariableUnitConversion(CurrentFolderData[i],IEDFVariableStrings[i])
+				CurrentFolderData[i] = variable_unit_conversion(CurrentFolderData[i], IEDFVariableStrings[i], Units, AtomicSpecies)
 	#			CurrentFolderData[i] = AzimuthalPhaseConversion(CurrentFolderData[i],IEDFVariableStrings[i])
 			#endfor
 
@@ -3176,7 +3000,7 @@ def run(argv=None):
 		#endfor
 
 		#Convert units if required.								!!! RM SJD, CONVERSION PERFORMED AT READ-IN
-	#	Image = VariableUnitConversion(Image,Variable)
+	#	Image = VariableUnitConversion(Image,Variable, Units, AtomicSpecies)
 
 		#Convert Azimuthal phase if required.					!!! RM SJD, MOVE THIS CONVERSION TO READ-IN
 		Image = AzimuthalPhaseConversion(Image,Variable)
@@ -3922,7 +3746,7 @@ def run(argv=None):
 		#endif
 
 		#Convert units if required.								!!! RM SJD, CONVERSION PERFORMED AT READ-IN
-	#	RProfile = VariableUnitConversion(RProfile,variable)
+	#	RProfile = VariableUnitConversion(RProfile,variable, Units, AtomicSpecies)
 
 		return(RProfile)
 	#enddef
@@ -3953,7 +3777,7 @@ def run(argv=None):
 		#endfor
 
 		#Convert units if required.								!!! RM SJD, CONVERSION PERFORMED AT READ-IN
-	#	Zlineout = VariableUnitConversion(Zlineout,variable)
+	#	Zlineout = VariableUnitConversion(Zlineout,variable, Units, AtomicSpecies)
 
 		return(Zlineout)
 	#enddef
@@ -4085,7 +3909,7 @@ def run(argv=None):
 
 			#Create and correct VariableIndices for each folder as required.
 			VariableIndices,VariableStrings = enumerate_variables(Variables, Header_TEC2D[l])
-			VariableIndices,VariableStrings = VariableInterpolator(VariableIndices,VariableStrings,MinSharedVariables)
+			VariableIndices,VariableStrings = variable_interpolator(VariableIndices, VariableStrings, MinSharedVariables, Globalnumvars)
 
 			#Update X-axis with folder information.
 			Xaxis.append( FolderNameTrimmer(Dirlist[l]) )
@@ -5094,7 +4918,7 @@ def run(argv=None):
 						#endif
 						
 						# Write Sheath Data separately as it is not included in the VariableList format
-						if image_plotsheath in ['Radial','Axial'] and i == len(VariableIndices)-1:
+						if image_plotsheath in ['Radial','Axial'] and i == len(variable_indices)-1:
 							np.savetxt(CSVFilename, [p for p in zip(SxAxis,Sx)], delimiter=',', fmt='%s')
 							WriteDataToFile(Sx, CSVDir+'Sx.csv')
 						#endif
@@ -5348,7 +5172,7 @@ def run(argv=None):
 					VariableIndices,VariableStrings = enumerate_variables(Variables, Header_TEC2D[l])
 
 					#Correct VariableIndices for folders containing different icp.dat.
-					VariableIndices,VariableStrings = VariableInterpolator(VariableIndices,VariableStrings,MinSharedVariables)
+					VariableIndices,VariableStrings = variable_interpolator(VariableIndices, VariableStrings, MinSharedVariables, Globalnumvars)
 
 					#Update legend with folder information.
 					Legendlist.append( FolderNameTrimmer(Dirlist[l]) )
@@ -5411,7 +5235,7 @@ def run(argv=None):
 					VariableIndices,VariableStrings = enumerate_variables(Variables, Header_TEC2D[l])
 
 					#Correct VariableIndices for folders containing different icp.dat.
-					VariableIndices,VariableStrings = VariableInterpolator(VariableIndices,VariableStrings,MinSharedVariables)
+					VariableIndices,VariableStrings = variable_interpolator(VariableIndices, VariableStrings, MinSharedVariables, Globalnumvars)
 
 					#Update legend with folder information.
 					Legendlist.append( FolderNameTrimmer(Dirlist[l]) )
@@ -6491,7 +6315,7 @@ def run(argv=None):
 
 			#Create VariableIndices for largest output, only compare variables shared between all folders.
 			VariableIndices,VariableStrings = enumerate_variables(Variables, Header_TEC2D[l])
-			VariableIndices,VariableStrings = VariableInterpolator(VariableIndices,VariableStrings,MinSharedVariables)
+			VariableIndices,VariableStrings = variable_interpolator(VariableIndices, VariableStrings, MinSharedVariables, Globalnumvars)
 
 			#Create Y-axis legend for each variable to be plotted.
 			YaxisLegend = VariableLabelMaker(VariableStrings)
