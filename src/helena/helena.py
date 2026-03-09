@@ -23,6 +23,7 @@
 from pylab import *
 from .io import get_directories
 from .initialisation import get_mesh_and_SI
+from .data import enumerate_variables, enumerate_vectors
 
 def run(argv=None):
 	from optparse import OptionParser
@@ -610,300 +611,6 @@ def run(argv=None):
 					#UNPACKING AND ORGANIZATION OF DATA#
 	#====================================================================#
 
-	def EnumerateVariables(Variables, Header):
-	#Takes:
-	# Variables 	- 1D array of strings
-	# Header 		- 1D Datafile Header Array (for 1 simulation folder)
-	#Returns:
-	# indices 		- 1D array of indices corresponding to Variables in Header
-	# strings		- 1D array of strings corresponding to Variable string in Header
-	#
-	#Example: EnumerateVariables(Variables,Header_TEC2D[l])
-
-		indices = list()
-		strings = list()
-		for Variable in Variables:
-
-			if Variable in Header:
-				index = Header.index(Variable)
-				indices.append(index)
-				strings.append(Header[index])
-				# print(Variable,strings[-1],indices[-1])		# Debug Option
-			else:
-				Variable_Not_In_Header=1
-			#endif
-		#endfor
-
-		return(indices,strings)
-	#enddef
-
-
-	def EnumerateVectors(Variable, Header, Prefixes=['FR','FZ']):
-	#Takes:
-	# Variable 		- Variable string, e.g. "AR3S"
-	# Header 		- 1D Datafile Header Array (for 1 simulation folder)
-	# Prefixes		- 1D array containing vector prefixes
-	#				  Prefixes are limited to ['FR','FZ'] or ['VR','VZ']
-	#Returns:
-	# Radial 		- 1D array, name and index of radial vector for input 'Variable'
-	# Axial 		- 1D array, name and index of axial vector for input 'Variable'
-	#
-	#Example:
-	#			EnumerateVectors('AR3S', Header_TEC2D[l], Prefixes['FR','FZ'])
-	#			Radial = ['FR-AR3S',121]
-	#			Axial = ['FZ-AR3S',120]
-	#			Where, 120,121 are the TECPLOT2D header indices of the named variables
-
-		# Create header lookup
-		HeaderIndex = {name: i for i, name in enumerate(Header)}
-
-		# Create output arrays
-		Radial = list()		# Saved [Match, Index]
-		Axial = list()		# Saved [Match, Index]
-
-		#=====#=====# SPECIAL CASES #=====#=====#
-
-		# Many variables do not follow a standard prefix format,
-		# this section explicitly defines these special cases.
-		#
-		# Special variables are directly "matched" to their
-		# vector equivelants, here "Wanted" variables are
-		# the explicit radial & axial vectors of "Variable"
-
-		if Variable in ['E FLUX-R','E FLUX-Z']:
-
-			# Prefixes are the explicit vector quantities relating to "Variable"
-			Vectors = ['E FLUX-R','E FLUX-Z']
-			RadialWanted = [f"{Vectors[0]}"]
-			AxialWanted = [f"{Vectors[1]}"]
-
-			# Match vector variable names
-			RadialMatch = next((w for w in RadialWanted if w in HeaderIndex), None)
-			AxialMatch = next((w for w in AxialWanted if w in HeaderIndex), None)
-
-			# Index vector variable names
-			RadialIndex = HeaderIndex[RadialMatch]
-			AxialIndex = HeaderIndex[AxialMatch]
-
-			# Return vector variable names and indices
-			Radial = [RadialMatch, RadialIndex]
-			Axial = [AxialMatch, AxialIndex]
-
-			return(Radial,Axial)
-		#endif
-
-		#=====#=====#
-
-		if Variable in ['FR-E','FZ-E']:
-
-			# Prefixes are the explicit vector quantities relating to "Variable"
-			Vectors = ['FR-E','FZ-E']
-			RadialWanted = [f"{Vectors[0]}"]
-			AxialWanted = [f"{Vectors[1]}"]
-
-			# Match vector variable names
-			RadialMatch = next((w for w in RadialWanted if w in HeaderIndex), None)
-			AxialMatch = next((w for w in AxialWanted if w in HeaderIndex), None)
-
-			# Index vector variable names
-			RadialIndex = HeaderIndex[RadialMatch]
-			AxialIndex = HeaderIndex[AxialMatch]
-
-			# Return vector variable names and indices
-			Radial = [RadialMatch, RadialIndex]
-			Axial = [AxialMatch, AxialIndex]
-
-			return(Radial,Axial)
-		#endif
-
-		#=====#=====#
-
-		if Variable in ['EF-TOT','EAMB-R','EAMB-Z']:
-
-			Vectors = ['EAMB-R','EAMB-Z']
-			RadialWanted = [f"{Vectors[0]}"]
-			AxialWanted = [f"{Vectors[1]}"]
-
-			RadialMatch = next((w for w in RadialWanted if w in HeaderIndex), None)
-			AxialMatch = next((w for w in AxialWanted if w in HeaderIndex), None)
-
-			RadialIndex = HeaderIndex[RadialMatch]
-			AxialIndex = HeaderIndex[AxialMatch]
-
-			Radial = [RadialMatch, RadialIndex]
-			Axial = [AxialMatch, AxialIndex]
-
-			return(Radial,Axial)
-		#endif
-
-		#=====#=====#
-
-		# NOTE, THIS IS FOR STATIC FIELDS ONLY, DO NOT MULTIPLY BY PHASE
-		if Variable in ['BT','BR','BZ']:
-
-			Vectors = ['BR','BZ']
-			RadialWanted = [f"{Vectors[0]}"]
-			AxialWanted = [f"{Vectors[1]}"]
-
-			RadialMatch = next((w for w in RadialWanted if w in HeaderIndex), None)
-			AxialMatch = next((w for w in AxialWanted if w in HeaderIndex), None)
-
-			RadialIndex = HeaderIndex[RadialMatch]
-			AxialIndex = HeaderIndex[AxialMatch]
-
-			Radial = [RadialMatch, RadialIndex]
-			Axial = [AxialMatch, AxialIndex]
-
-			return(Radial,Axial)
-		#endif
-
-		#=====#=====#
-
-		if Variable in ['JR-NET','JZ-NET']:
-
-			Vectors = ['JR-NET','JZ-NET']
-			RadialWanted = [f"{Vectors[0]}"]
-			AxialWanted = [f"{Vectors[1]}"]
-
-			RadialMatch = next((w for w in RadialWanted if w in HeaderIndex), None)
-			AxialMatch = next((w for w in AxialWanted if w in HeaderIndex), None)
-
-			RadialIndex = HeaderIndex[RadialMatch]
-			AxialIndex = HeaderIndex[AxialMatch]
-
-			Radial = [RadialMatch, RadialIndex]
-			Axial = [AxialMatch, AxialIndex]
-
-			return(Radial,Axial)
-		#endif
-
-		#=====#=====#
-
-		if Variable in ['VR-NEUTRAL','VZ-NEUTRAL']:
-
-			Vectors = ['VR-NEUTRAL','VZ-NEUTRAL']
-			RadialWanted = [f"{Vectors[0]}"]
-			AxialWanted = [f"{Vectors[1]}"]
-
-			RadialMatch = next((w for w in RadialWanted if w in HeaderIndex), None)
-			AxialMatch = next((w for w in AxialWanted if w in HeaderIndex), None)
-
-			RadialIndex = HeaderIndex[RadialMatch]
-			AxialIndex = HeaderIndex[AxialMatch]
-
-			Radial = [RadialMatch, RadialIndex]
-			Axial = [AxialMatch, AxialIndex]
-
-			return(Radial,Axial)
-		#endif
-
-		#=====#=====#
-
-		if Variable in ['VR-ION+','VZ-ION+']:
-
-			Vectors = ['VR-ION+','VZ-ION+']
-			RadialWanted = [f"{Vectors[0]}"]
-			AxialWanted = [f"{Vectors[1]}"]
-
-			RadialMatch = next((w for w in RadialWanted if w in HeaderIndex), None)
-			AxialMatch = next((w for w in AxialWanted if w in HeaderIndex), None)
-
-			RadialIndex = HeaderIndex[RadialMatch]
-			AxialIndex = HeaderIndex[AxialMatch]
-
-			Radial = [RadialMatch, RadialIndex]
-			Axial = [AxialMatch, AxialIndex]
-
-			return(Radial,Axial)
-		#endif
-
-		#=====#=====#
-
-		if Variable in ['VR-ION-','VZ-ION-']:
-
-			Vectors = ['VR-ION-','VZ-ION-']
-			RadialWanted = [f"{Vectors[0]}"]
-			AxialWanted = [f"{Vectors[1]}"]
-
-			RadialMatch = next((w for w in RadialWanted if w in HeaderIndex), None)
-			AxialMatch = next((w for w in AxialWanted if w in HeaderIndex), None)
-
-			RadialIndex = HeaderIndex[RadialMatch]
-			AxialIndex = HeaderIndex[AxialMatch]
-
-			Radial = [RadialMatch, RadialIndex]
-			Axial = [AxialMatch, AxialIndex]
-
-			return(Radial,Axial)
-		#endif
-
-		#=====#=====#
-
-		if Variable in ['I MFLUX-R','I MFLUX-Z']:
-
-			Vectors = ['I MFLUX-R','I MFLUX-Z']
-			RadialWanted = [f"{Vectors[0]}"]
-			AxialWanted = [f"{Vectors[1]}"]
-
-			RadialMatch = next((w for w in RadialWanted if w in HeaderIndex), None)
-			AxialMatch = next((w for w in AxialWanted if w in HeaderIndex), None)
-
-			RadialIndex = HeaderIndex[RadialMatch]
-			AxialIndex = HeaderIndex[AxialMatch]
-
-			Radial = [RadialMatch, RadialIndex]
-			Axial = [AxialMatch, AxialIndex]
-
-			return(Radial,Axial)
-		#endif
-
-
-		#=====#=====# GENERAL CASE #=====#=====#
-
-		# The general case applies to species fluxes and velocities
-		# where variables are saved in the following formats:
-		#	"FR-AR3S", "FZ-AR3S"
-		#	"VR-AR3S", "VR-AR3S"
-		# This general approach applies to any given species,
-		#	e.g. "FR-O2" or "FZ-NH2"
-
-		# IF PLOTTING VECTORS ONTO DENSITY FIGURES
-		# Apply prefix to full name,
-		#	i.e. "AR3S" becomes "FR-AR3S" 		and IS matched
-		#        "FR-AR3S" becomes "FR-FR-AR3S" and IS NOT matched
-	#	RadialWanted = [f"{Prefixes[0]}-{Variable}"]
-	#	AxialWanted = [f"{Prefixes[1]}-{Variable}"]
-
-		# IF PLOTTING VECTORS ONTO FLUX FIGURES
-		# Apply prefix ignoring first three characters,
-		#	i.e. "AR3S" becomes "FR-S" 			and IS NOT matched
-		#        "FR-AR3S" becomes "FR-AR3S" 	and IS matched
-		RadialWanted = [f"{Prefixes[0]}-{Variable[3::]}"]
-		AxialWanted = [f"{Prefixes[1]}-{Variable[3::]}"]
-
-		# Search .PDT file header and match for "Wanted" string, return None if none exist
-		RadialMatch = next((w for w in RadialWanted if w in HeaderIndex), None)
-		AxialMatch = next((w for w in AxialWanted if w in HeaderIndex), None)
-
-		# Index variables (in Header order) if a match is found
-		if RadialMatch is None: RadialIndex = None
-		else: RadialIndex = HeaderIndex[RadialMatch]
-		if AxialMatch is None: AxialIndex = None
-		else: AxialIndex = HeaderIndex[AxialMatch]
-		#endif
-
-		# Return vector variable names and indices
-		Radial = [RadialMatch, RadialIndex]
-		Axial = [AxialMatch, AxialIndex]
-	#	print(Variable)
-	#	print(Radial, Axial)
-	#	print('')
-
-
-		return(Radial,Axial)
-	#enddef
-
-
 	#Identifies if variable exists in all simulations, rejects if not.
 	#Allows for the comparison of datasets with different icp.dat files.
 	#Takes VariableIndices, VariableStrings, globalMinSharedVariables
@@ -1078,11 +785,11 @@ def run(argv=None):
 
 		#Only Azimuthally varying fields require phase conversion
 		elif IsStringInVariable(variable,['ETHETA']) == True:
-			phaseprocess,phasevariable = EnumerateVariables(['PHASE'],Header_TEC2D[l])
+			phaseprocess,phasevariable = enumerate_variables(['PHASE'], Header_TEC2D[l])
 		elif IsStringInVariable(variable,['J-THETA']) == True:
-			phaseprocess,phasevariable = EnumerateVariables(['PHASE'],Header_TEC2D[l])
+			phaseprocess,phasevariable = enumerate_variables(['PHASE'], Header_TEC2D[l])
 		elif IsStringInVariable(variable,['J-TH(MAG)']) == True:
-			phaseprocess,phasevariable = EnumerateVariables(['J-TH(PHA)'],Header_TEC2D[l])
+			phaseprocess,phasevariable = enumerate_variables(['J-TH(PHA)'], Header_TEC2D[l])
 		else:
 			return(profile)
 		#endif
@@ -1203,7 +910,7 @@ def run(argv=None):
 		#endfor
 
 		#Enumerate variables in the order they appear in movie1.pdt
-		proclist,varlist = EnumerateVariables(Variables,Header_movie1[folder])
+		proclist,varlist = enumerate_variables(Variables, Header_movie1[folder])
 
 		#Interpolate variable lists for all folders to find minimum shared set
 		proclist,varlist = VariableInterpolator(proclist,varlist,MinSharedVariables)
@@ -3162,7 +2869,7 @@ def run(argv=None):
 	#Create global list of all variable names and find shortest list.
 	for l in range(0,numfolders):
 		#Alphabetize the VariableStrings and keep global alphabetized list.
-		tempvarlist = EnumerateVariables(Variables,Header_TEC2D[l])[1]
+		tempvarlist = enumerate_variables(Variables, Header_TEC2D[l])[1]
 		tempvarlist = sort(tempvarlist)
 		numvars = len(tempvarlist)
 
@@ -4377,7 +4084,7 @@ def run(argv=None):
 		for l in range(0,numfolders):
 
 			#Create and correct VariableIndices for each folder as required.
-			VariableIndices,VariableStrings = EnumerateVariables(Variables,Header_TEC2D[l])
+			VariableIndices,VariableStrings = enumerate_variables(Variables, Header_TEC2D[l])
 			VariableIndices,VariableStrings = VariableInterpolator(VariableIndices,VariableStrings,MinSharedVariables)
 
 			#Update X-axis with folder information.
@@ -4728,8 +4435,8 @@ def run(argv=None):
 		#Obtain current folder ion and electron densities if not already supplied.
 		#Default to 2D data format.
 		if Phase == 'NaN' and len(Ne) == 0:
-			IONproc = EnumerateVariables(PosSpecies,Header_TEC2D[folderidx])[0][0]
-			Eproc = EnumerateVariables(['E'],Header_TEC2D[folderidx])[0][0]
+			IONproc = enumerate_variables(PosSpecies, Header_TEC2D[folderidx])[0][0]
+			Eproc = enumerate_variables(['E'], Header_TEC2D[folderidx])[0][0]
 			Ne = Data[folderidx][Eproc]
 			Ni = Data[folderidx][IONproc]
 		#If phase is supplied, use phase data format.				<<< TO BE REMOVED
@@ -5055,7 +4762,7 @@ def run(argv=None):
 			Dir2Dplots = CreateNewFolder(Dirlist[l],'TECPlot2D')
 
 			# Create VariableIndices for each folder as required.
-			VariableIndices,VariableStrings = EnumerateVariables(Variables,Header_TEC2D[l])
+			VariableIndices,VariableStrings = enumerate_variables(Variables, Header_TEC2D[l])
 
 			# Define image extent for directory 'l'
 			extent, aspectratio = DataExtent(l)
@@ -5073,7 +4780,7 @@ def run(argv=None):
 				#=====##=====# IMAGE OVERLAYS #=====##=====#
 
 				# Overlay vector streamplot if exists
-				Radial,Axial = EnumerateVectors(VariableStrings[i],Header_TEC2D[l])
+				Radial,Axial = enumerate_vectors(VariableStrings[i], Header_TEC2D[l])
 
 				# Confirm Variable[k] has both vector counterparts (e.g. FR-AR3S, FZ-AR3S)
 				VectorVariablesExist = True
@@ -5219,7 +4926,7 @@ def run(argv=None):
 			DirMovieicp = CreateNewFolder(Dirlist[l],'Movieicp/')
 
 			#Enumerate variable strings in the order they appear in movie_icp.pdt
-			VariableIndices,VariableStrings = EnumerateVariables(Variables,Header_movieicp[l])
+			VariableIndices,VariableStrings = enumerate_variables(Variables, Header_movieicp[l])
 
 			# Define image extent for directory 'l'
 			extent, aspectratio = DataExtent(l)
@@ -5447,7 +5154,7 @@ def run(argv=None):
 		for l in range(0,numfolders):
 
 			#Create VariableIndices for each folder as required.
-			VariableIndices,VariableStrings = EnumerateVariables(Variables,Header_TEC2D[l])
+			VariableIndices,VariableStrings = enumerate_variables(Variables, Header_TEC2D[l])
 
 			#Generate SI scale axes for lineout plots and refresh legend.
 			Raxis = GenerateAxis('Radial',ISYMlist[l])
@@ -5638,7 +5345,7 @@ def run(argv=None):
 				for l in range(0,numfolders):
 
 					#Create VariableIndices for each folder as required.
-					VariableIndices,VariableStrings = EnumerateVariables(Variables,Header_TEC2D[l])
+					VariableIndices,VariableStrings = enumerate_variables(Variables, Header_TEC2D[l])
 
 					#Correct VariableIndices for folders containing different icp.dat.
 					VariableIndices,VariableStrings = VariableInterpolator(VariableIndices,VariableStrings,MinSharedVariables)
@@ -5701,7 +5408,7 @@ def run(argv=None):
 				for l in range(0,numfolders):
 
 					#Create VariableIndices for each folder as required.
-					VariableIndices,VariableStrings = EnumerateVariables(Variables,Header_TEC2D[l])
+					VariableIndices,VariableStrings = enumerate_variables(Variables, Header_TEC2D[l])
 
 					#Correct VariableIndices for folders containing different icp.dat.
 					VariableIndices,VariableStrings = VariableInterpolator(VariableIndices,VariableStrings,MinSharedVariables)
@@ -5758,8 +5465,8 @@ def run(argv=None):
 			Dirlineouts = CreateNewFolder(Dirlist[l],'multivar_Profiles/')
 
 			#Create VariableIndices for each folder as required.
-			VariableIndices,VariableStrings = EnumerateVariables(Variables,Header_TEC2D[l])
-			multiVariableIndices,multiVariableStrings = EnumerateVariables(multivar,Header_TEC2D[l])
+			VariableIndices,VariableStrings = enumerate_variables(Variables, Header_TEC2D[l])
+			multiVariableIndices,multiVariableStrings = enumerate_variables(multivar, Header_TEC2D[l])
 
 			#Create variable labels with SI unit conversions if required.
 			Ylabel = VariableLabelMaker(VariableStrings)
@@ -5889,7 +5596,7 @@ def run(argv=None):
 			DirTemporal = CreateNewFolder(Dirlist[l],'Movieicp/')
 
 			#Enumerate variable strings in the order they appear in movie_icp.pdt
-			VariableIndices,VariableStrings = EnumerateVariables(Variables,Header_movieicp[l])
+			VariableIndices,VariableStrings = enumerate_variables(Variables, Header_movieicp[l])
 
 			IterArray = list()
 			#Generate a numerical iteration array for save strings
@@ -6076,7 +5783,7 @@ def run(argv=None):
 			DirMeshAve = CreateNewFolder(DirTemporal,'1DTimeAxis_Profiles/')
 
 			# Enumerate variable strings in the order they appear in movie_icp.pdt
-			VariableIndices,VariableStrings = EnumerateVariables(Variables,Header_movieicp[l])
+			VariableIndices,VariableStrings = enumerate_variables(Variables, Header_movieicp[l])
 
 			# Create list and x-axis for convergence trend plotting.
 			for i in range(0,len(MovieIterlist[l])):
@@ -6194,7 +5901,7 @@ def run(argv=None):
 			DirConvergence = CreateNewFolder(Dirlist[l],'Movieicp/')
 
 			#Enumerate variable strings in the order they appear in movie_icp.pdt
-			VariableIndices,VariableStrings = EnumerateVariables(Variables,Header_movieicp[l])
+			VariableIndices,VariableStrings = enumerate_variables(Variables, Header_movieicp[l])
 
 			#Extract saved iteration strings and create list for mean convergence trends
 			ConvergenceTrends,IterArray,IterAxis = list(),list(),list()
@@ -6355,7 +6062,7 @@ def run(argv=None):
 			DirIEDF = CreateNewFolder(Dirlist[l],'EDFplots')
 
 			#Create VariableIndices for requested EDF species and extract images.
-			VariableIndices,VariableStrings = EnumerateVariables(IEDFVariables,Header_IEDF[l])
+			VariableIndices,VariableStrings = enumerate_variables(IEDFVariables, Header_IEDF[l])
 
 			#For all requested variables.
 			for i in tqdm(range(0,len(VariableIndices))):
@@ -6484,7 +6191,7 @@ def run(argv=None):
 				EDFprofile = list()
 
 				#Create VariableIndices for requested EDF species and extract images.
-				VariableIndices,VariableStrings = EnumerateVariables(IEDFVariables,Header_IEDF[l])
+				VariableIndices,VariableStrings = enumerate_variables(IEDFVariables, Header_IEDF[l])
 				Legendlist.append(FolderNameTrimmer(Dirlist[l]))
 
 				#Extract image from required variable and flatten angular distribution profile.
@@ -6783,7 +6490,7 @@ def run(argv=None):
 		for k in tqdm(range(0,len(Variables))):
 
 			#Create VariableIndices for largest output, only compare variables shared between all folders.
-			VariableIndices,VariableStrings = EnumerateVariables(Variables,Header_TEC2D[l])
+			VariableIndices,VariableStrings = enumerate_variables(Variables, Header_TEC2D[l])
 			VariableIndices,VariableStrings = VariableInterpolator(VariableIndices,VariableStrings,MinSharedVariables)
 
 			#Create Y-axis legend for each variable to be plotted.
@@ -6940,7 +6647,7 @@ def run(argv=None):
 		for l in range(0,numfolders):
 
 			#Create VariableIndices for each folder as required.
-			Process,Variable = EnumerateVariables(['P-POT'],Header_TEC2D[l])
+			Process,Variable = enumerate_variables(['P-POT'], Header_TEC2D[l])
 
 			#Update X-axis with folder information.
 			Xaxis.append( FolderNameTrimmer(Dirlist[l]) )
@@ -7039,7 +6746,7 @@ def run(argv=None):
 			for l in range(0,numfolders):
 
 				#Create extract data for the neutral flux and neutral velocity.
-				VariableIndices,VariableStrings = EnumerateVariables(RequestedPowers,Header_TEC2D[l])
+				VariableIndices,VariableStrings = enumerate_variables(RequestedPowers, Header_TEC2D[l])
 
 				#Extract 2D power density data array [W/m3]
 				PowerDensity = ImageExtractor2D(Data[l][VariableIndices[k]])
@@ -7168,17 +6875,17 @@ def run(argv=None):
 				Xaxis.append( FolderNameTrimmer(Dirlist[l]) )
 
 				#Extract data required for Thrust calculations, discharge plane (Z) = thrustloc.
-				VariableIndices,VariableStrings = EnumerateVariables(['VZ-NEUTRAL'],Header_TEC2D[l])
+				VariableIndices,VariableStrings = enumerate_variables(['VZ-NEUTRAL'], Header_TEC2D[l])
 				NeutralVelocity = ExtractRadialProfile(Data[l],VariableIndices[0],VariableStrings[0],thrustloc)
-				VariableIndices,VariableStrings = EnumerateVariables(['VZ-ION+'],Header_TEC2D[l])
+				VariableIndices,VariableStrings = enumerate_variables(['VZ-ION+'], Header_TEC2D[l])
 				IonVelocity = ExtractRadialProfile(Data[l],VariableIndices[0],VariableStrings[0],thrustloc)
-				VariableIndices,VariableStrings = EnumerateVariables(['FZ-AR3S'],Header_TEC2D[l])
+				VariableIndices,VariableStrings = enumerate_variables(['FZ-AR3S'], Header_TEC2D[l])
 				NeutralAxialFlux = ExtractRadialProfile(Data[l],VariableIndices[0],VariableStrings[0],thrustloc)
-				VariableIndices,VariableStrings = EnumerateVariables(['FZ-AR+'],Header_TEC2D[l])
+				VariableIndices,VariableStrings = enumerate_variables(['FZ-AR+'], Header_TEC2D[l])
 				IonAxialFlux = ExtractRadialProfile(Data[l],VariableIndices[0],VariableStrings[0],thrustloc)
-				VariableIndices,VariableStrings = EnumerateVariables(['TG-AVE'],Header_TEC2D[l])
+				VariableIndices,VariableStrings = enumerate_variables(['TG-AVE'], Header_TEC2D[l])
 				NeutGasTemp = ExtractRadialProfile(Data[l],VariableIndices[0],VariableStrings[0],thrustloc)
-				VariableIndices,VariableStrings = EnumerateVariables(['PRESSURE'],Header_TEC2D[l])
+				VariableIndices,VariableStrings = enumerate_variables(['PRESSURE'], Header_TEC2D[l])
 				try:
 					Pressure = ExtractRadialProfile(Data[l],VariableIndices[0],VariableStrings[0],thrustloc)
 					PressureDown = ExtractRadialProfile(Data[l],VariableIndices[0],VariableStrings[0],thrustloc-1)
@@ -7497,7 +7204,7 @@ def run(argv=None):
 				CrossSection = np.pi*((7.1E-11)**2)		#[m^2]
 
 				#Extract data for the neutral flux and neutral velocity.
-				VariableIndices,VariableStrings = EnumerateVariables(FluidSpecies,Header_TEC2D[l])
+				VariableIndices,VariableStrings = enumerate_variables(FluidSpecies, Header_TEC2D[l])
 				Sx,SxAxis = CalcSheathExtent(folderidx=l)
 
 				#Update X-axis with folder information.
@@ -7605,12 +7312,12 @@ def run(argv=None):
 			for l in range(0,numfolders):
 
 				#Extract spatially resolved pressure and neutral densities.
-				VariableIndices,VariableStrings = EnumerateVariables(['PRESSURE'],Header_TEC2D[l])
+				VariableIndices,VariableStrings = enumerate_variables(['PRESSURE'], Header_TEC2D[l])
 				Pressure = ImageExtractor2D(Data[l][VariableIndices[0]],VariableStrings[0])
 				Sx,SxAxis = CalcSheathExtent(folderidx=l)
 
 				#If only single neutral species - extract that density
-				VariableIndices,VariableStrings = EnumerateVariables(FluidSpecies,Header_TEC2D[l])
+				VariableIndices,VariableStrings = enumerate_variables(FluidSpecies, Header_TEC2D[l])
 				if len(VariableIndices) == 1:
 					NeutralDensity = ImageExtractor2D(Data[l][VariableIndices[0]],VariableStrings[0])
 				#If there are multiple neutral species, combine them to get total neutral density
@@ -8113,7 +7820,7 @@ def run(argv=None):
 					#=====##=====# IMAGE OVERLAYS #=====##=====#
 
 					# Overlay vector streamplot if exists
-					Radial,Axial = EnumerateVectors(VariableStrings[i],Header_movie1[l])
+					Radial,Axial = enumerate_vectors(VariableStrings[i], Header_movie1[l])
 
 					# Confirm Variable[k] has both vector counterparts (e.g. FR-AR3S, FZ-AR3S)
 					VectorVariablesExist = True
