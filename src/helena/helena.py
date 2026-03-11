@@ -201,7 +201,7 @@ def run(argv=None):
 	waveformlocs = []						# Cell locations of additional waveforms [R,Z].
 
 	# Requested variables and plotting locations.
-	Variables = Phys+Ar						# Requested Variables from Tecplot2D.pdt, tecplot_kin.pdt, and movie_icp.pdt
+	Variables = TEST						# Requested Variables from Tecplot2D.pdt, tecplot_kin.pdt, and movie_icp.pdt
 	multivar = []							# Additional variables plotted ontop of [Variables]
 	radialprofiles = []						# Radial 1D-Profiles to be plotted (fixed Z-mesh) --
 	axialprofiles = [0]						# Axial 1D-Profiles to be plotted (fixed R-mesh) |
@@ -213,7 +213,7 @@ def run(argv=None):
 
 
 	# Requested diagnostics and plotting routines.
-	savefig_tecplot2D = False				# 2D Single-Variables: TECPLOT2D.PDT				< .csv File Save
+	savefig_tecplot2D = True				# 2D Single-Variables: TECPLOT2D.PDT				< .csv File Save
 
 	savefig_movieicp2D = False				# 2D Variables against space-axis:	movie_icp.pdt	< MAXITER SHOULD BE AN ARRAY
 	savefig_movieicp1D = False				# 1D Variables against space-axis:	movie_icp.pdt	< MAXITER SHOULD BE AN ARRAY
@@ -234,7 +234,7 @@ def run(argv=None):
 	savefig_trendphaseresolved = False		# Phase resolved trends at axial/radial cells		# CHANGE TO 'ProbeLoc' cell
 	thrustloc = 45							# Z-axis cell for thrust calculation  [Cells]
 
-	savefig_phaseresolve2D = True			# 2D Phase Resolved Images							< .csv File Save
+	savefig_phaseresolve2D = False			# 2D Phase Resolved Images							< .csv File Save
 	savefig_phaseresolve1D = False			# 1D Phase Resolved Images							< .csv File Save
 	savefig_sheathdynamics = False			# 1D and 2D sheath dynamics images
 	savefig_PROES =	False					# Simulated PROES Diagnostic
