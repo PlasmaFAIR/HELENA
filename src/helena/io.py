@@ -308,7 +308,7 @@ def create_new_folder(direc, dir_string):
     # Takes destination dir and namestring, returns new directory.
 
     try:
-        new_folder_dir = direc + dir_string + '/'
+        new_folder_dir = direc + dir_string + "/"
         os.mkdir(new_folder_dir, 0o755)
     except:
         raise ValueError("Unable to create new folder")
@@ -322,11 +322,34 @@ def folder_name_trimmer(dir_string, index=1):
 
     try:
         for i in range(0, index):
-            underscoreloc = str(dir_string[::-1]).index('_')
-            cutoff = (len(dir_string) - underscoreloc)
+            underscoreloc = str(dir_string[::-1]).index("_")
+            cutoff = len(dir_string) - underscoreloc
             name_string = dir_string[cutoff:-1]
-            dir_string = dir_string[:cutoff - 1]
+            dir_string = dir_string[: cutoff - 1]
     except:
         name_string = str(dir_string[2:-1])
 
     return name_string
+
+
+def make_movie(folder_dir, output):
+    # Takes folder directory and creates a movie from .png images contained within.
+
+    # Obtain current directory and set movie output parameters
+    home_dir = os.getcwd()
+    output = str(output) + ".mp4"
+    morph, FPS = 1, 24
+
+    # Ensure folder directory is in BASH-friendly format
+    folder_dir = home_dir + folder_dir[1::]
+
+    # Use ffmpeg to create the movies and save in relevent files.
+    os.system("cd " + folder_dir)
+    os.system(
+        "convert *.png -delay 1 -morph " + str(morph) + " %05d.morph.jpg > /dev/null"
+    )
+    os.system(
+        "ffmpeg -nostats -loglevel 0 -r " + str(FPS) + " -i %05d.morph.jpg " + output
+    )
+    os.system("rm *.jpg")
+    os.system("cd " + home_dir)

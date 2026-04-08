@@ -22,7 +22,7 @@
 
 from pylab import *
 from .io import get_directories, write_to_csv, write_data_to_file, read_data_from_file, create_new_folder, \
-	folder_name_trimmer
+	folder_name_trimmer, make_movie
 from .initialisation import get_mesh_and_SI
 from .data import extract_raw_data, read_TEC2D, read_TEC2D_phase, read_geometry
 from .variables import enumerate_variables, enumerate_vectors, variable_interpolator, variable_unit_conversion, azimuthal_phase_conversion
@@ -861,31 +861,6 @@ def run(argv=None):
 	#====================================================================#
 					#UNPACKING AND ORGANIZATION OF DATA#
 	#====================================================================#
-
-	#Takes folder directory and creates a movie from .png images contained within.
-	def MakeMovie(FolderDir,Output):
-
-		#Break if movies not requested
-		if ffmpegMovies == False: return()
-
-		#Obtain current directory and set movie output parameters
-		HomeDir = os.getcwd()
-		Output = str(Output)+'.mp4'
-		Morph, FPS = 1, 24
-
-		#Ensure folder directory is in BASH-friendly format
-		FolderDir = HomeDir+FolderDir[1::]
-
-		#Use ffmpeg to create the movies and save in relevent files.
-		os.system("cd "+FolderDir)
-		os.system("convert *.png -delay 1 -morph "+str(Morph)+" %05d.morph.jpg > /dev/null")
-		os.system("ffmpeg -nostats -loglevel 0 -r "+str(FPS)+" -i %05d.morph.jpg "+Output)
-		os.system("rm *.jpg")
-		os.system("cd "+HomeDir)
-
-		return()
-	#enddef
-
 
 	#Runs requested dataconversion script with pre-defined arguments.
 	#Takes name of convert script, any predefined arguments and newly created files.
@@ -4532,7 +4507,8 @@ def run(argv=None):
 
 				#Create .mp4 movie from completed images.
 				Prefix = folder_name_trimmer(Dirlist[l])
-				MakeMovie(DirMoviePlots, Prefix + '_' + VariableStrings[i])
+				if ffmpegMovies:
+					make_movie(DirMoviePlots, Prefix + '_' + VariableStrings[i])
 			#endfor
 		#endif
 
@@ -7224,7 +7200,8 @@ def run(argv=None):
 
 					#Create .mp4 movie from completed images.
 					Prefix = folder_name_trimmer(Dirlist[l]) + '_' + NameString
-					MakeMovie(Dir1DProfiles, Prefix)
+					if ffmpegMovies:
+						make_movie(Dir1DProfiles, Prefix)
 				#endfor
 			#endfor
 		#endfor
@@ -7530,7 +7507,8 @@ def run(argv=None):
 
 				#Create .mp4 movie from completed images.
 				Prefix = folder_name_trimmer(Dirlist[l])
-				MakeMovie(DirMovieplots, Prefix + '_' + VariableStrings[i])
+				if ffmpegMovies:
+					make_movie(DirMovieplots, Prefix + '_' + VariableStrings[i])
 			#endfor
 		#endfor
 
