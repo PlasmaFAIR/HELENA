@@ -8,3 +8,10 @@ def string_in_variable(variable, stringarray):
             return True
 
     return False
+
+
+def is_radial_variable(variable):
+    # Takes variablenames and checks if variable is radial.
+    # Returns boolian if variable is radial, used for symmetry options.
+
+    return string_in_variable(variable, stringarray=["VR-", "JR-", "FR-", "FLUX-R"])

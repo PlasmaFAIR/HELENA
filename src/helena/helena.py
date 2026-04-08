@@ -26,7 +26,7 @@ from .io import get_directories, write_to_csv, write_data_to_file, read_data_fro
 from .initialisation import get_mesh_and_SI
 from .data import extract_raw_data, read_TEC2D, read_TEC2D_phase, read_geometry
 from .variables import enumerate_variables, enumerate_vectors, variable_interpolator, variable_unit_conversion, azimuthal_phase_conversion
-from .utility import string_in_variable
+from .utility import string_in_variable, is_radial_variable
 from .external import auto_conv_prof
 
 def run(argv=None):
@@ -861,24 +861,6 @@ def run(argv=None):
 	#====================================================================#
 					#UNPACKING AND ORGANIZATION OF DATA#
 	#====================================================================#
-
-	#Takes variablenames and checks if variable is radial.
-	#Returns boolian if variable is radial, used for symmetry options.
-	#ReverseRadial = IsRadialVariable(VariableStrings[l])
-	def IsRadialVariable(variable):
-
-		#List of radially symmetric variable names (i.e. variables that are negative across R=0)
-		RadialVariableNames = ['VR-','JR-','FR-','FLUX-R']
-
-		#Return true if supplied variable is within list
-		IsRadial = False
-		if string_in_variable(variable, RadialVariableNames) == True:
-			IsRadial = True
-		#endif
-
-		return(IsRadial)
-	#enddef
-
 
 	#Makeshift way of creating units for each legend entry.
 	def VariableLabelMaker(VariableStrings):
@@ -3170,7 +3152,7 @@ def run(argv=None):
 		#endif
 
 		#Apply image axis-symmetry, with negative values, if required.
-		RadialBool = IsRadialVariable(variable)
+		RadialBool = is_radial_variable(variable)
 		Image = SymmetryConverter(Image,RadialBool)
 
 		#Rotate image if required
@@ -3262,12 +3244,12 @@ def run(argv=None):
 			Zstart = len(Data[process])-ZEnd
 			RProfile = Data[process][Zstart:Zend][::-1]
 			#If variable is radially symmetric, add negative to symmetry
-			if IsRadialVariable(variable) == True:
+			if is_radial_variable(variable) == True:
 				for m in range(0,len(RProfile)):
 					RProfile.append(-Data[process][Zstart:Zend][m])
 				#endfor
 			#If variable is axially symmetric, add positive.
-			elif IsRadialVariable(variable) == False:
+			elif is_radial_variable(variable) == False:
 				for m in range(0,len(RProfile)):
 					RProfile.append(Data[process][Zstart:Zend][m])
 				#endfor
