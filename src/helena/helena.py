@@ -27,6 +27,7 @@ from .initialisation import get_mesh_and_SI
 from .data import extract_raw_data, read_TEC2D, read_TEC2D_phase, read_geometry
 from .variables import enumerate_variables, enumerate_vectors, variable_interpolator, variable_unit_conversion, azimuthal_phase_conversion
 from .utility import string_in_variable
+from .external import auto_conv_prof
 
 def run(argv=None):
 	from optparse import OptionParser
@@ -88,7 +89,6 @@ def run(argv=None):
 	#Import Additional Modules
 	from mpl_toolkits.axes_grid1 import make_axes_locatable
 	from scipy.signal import savgol_filter
-	from subprocess import Popen, PIPE
 	from matplotlib import pyplot as plt
 	from matplotlib import colors as col
 	from matplotlib import ticker
@@ -861,81 +861,6 @@ def run(argv=None):
 	#====================================================================#
 					#UNPACKING AND ORGANIZATION OF DATA#
 	#====================================================================#
-
-	#Runs requested dataconversion script with pre-defined arguments.
-	#Takes name of convert script, any predefined arguments and newly created files.
-	#Returns nothing, runs script in each folder, expects to run over all folders.
-	# *** TECPLOT FILE IS "NPROFILE_TEC2D.PDT" FOR NEUTRAL PROFILE DATA. ***
-	# *** TECPLOT FILE IS "IPROFILE_TEC2D.PDT FOR ION PROFILE DATA. ***
-	def AutoConvProf(ConvProfexe,args=[],DirAdditions=[]):
-		HomeDir = os.getcwd()
-		os.chdir(Dirlist[l])
-
-		#ENTER FILE NAME FOR RAW PLOTTING DATA (simulation pcmc output file, default pcmc.prof)
-		pcmcprof = 'pcmc.prof'
-		#ENTER TITLE FOR DATA TO BE USED BY TECPLOT (TITLE MUST BE <= 20 CHARACTERS)
-		TECPlotTitle = 'title'
-		#ENTER 1 TO "APPROVE" WRITING VARIABLES 0 NOT TO "APPROVE"
-		WriteVars = '1'
-		#Should angular statistics be normalized to f(theta)/solid-angle? (default is f(theta) x d(omega))
-		NormaliseAngularStatistics = '1'
-		#Should profiles be averaged across 0 degrees?
-		AverageAcross0Degrees = '1'
-		#[pcmc.prof, title, write, normalise, average] are basic requirements
-		InitArgs = [pcmcprof,TECPlotTitle,WriteVars,NormaliseAngularStatistics,AverageAcross0Degrees]
-
-		# Write data for each CPCMCSPEC species, for each CMATSTATS material
-		# Asks for material first, then for each species seperately, total = IPCMCSPEC + IMATSTATS*IPCMCSPEC
-		# EXAMPLE TEXT: SHOULD DATA FOR POSITION  0.25 CM, MATERIAL 5 BE WRITTEN? (1 OR 0)
-		SpecArgs = np.ones(IMATSTATS*IPCMCSPEC+IPCMCSPEC, dtype=str).tolist()
-
-		# Should flux(energy) be integrated for angle and flux(angle) be integrated for energy
-		IntegrateFluxEnergy = '1'
-		IntegrateArgs = [IntegrateFluxEnergy]
-
-		#Concat all pcmc.prof args into a single list of strings
-		args = InitArgs+SpecArgs+IntegrateArgs
-	#	args = [] 						# <<< UNCOMMENT FOR MANUAL ENTRY OF VALUES.
-	#	print(args)						# UPDATE FEED ARGS IN NAM.READIN AND REMOVE THE ABOVE LINE ONCE FIXED.
-	#	print(os.linesep.join(args))	# PRINTS EACH ITEM IN LIST ON SEPERATE LINE
-	#	#[pcmc.prof,title,1,1,1]+[pcmcmat+pcmcmat*pcmcspecies]+[1] for manual usage
-
-		#=====#=====#
-
-		#Remove old files to avoid any overwrite errors.
-		for i in range(0,len(DirAdditions)): os.system('rm -f '+DirAdditions[i])
-
-		#THIS SECTION IS OUT OF DATE, SUBPROCESS.COMMUNICATE REQUIRES "bytes-like objects" NOT STRINGS
-		#TypeError: a bytes-like object is required, not 'str'
-		#Use predefined arguments if supplied, suppresses output to devnull.
-		if len(args) > 0:
-			with open(os.devnull, 'w') as fp:
-				try:
-					subprocess = Popen(ConvProfexe, stdin=PIPE, stdout=fp, encoding='utf8') #noshell=True
-					subprocess.communicate(os.linesep.join(args), timeout=15)				#15 second timeout
-				except:
-					print('')
-					print('### Timeout while using conv_prof.exe   ###')
-					print('### Check "args" length in AutoConvProf ###')
-					print('')
-					exit()
-			#endwith
-
-		#If no arguments are supplied, run script and allow user inputs.
-		elif len(args) == 0:
-			os.system(ConvProfexe)
-		#endif
-
-		# OLD METHOD USED TO HAVE TO MANUALLY UPDATE DIR,
-		# NEW METHODS UPDATE DIR AUTOMATICALLY
-	#	for i in range(0,len(DirAdditions)): Dir.append(Dirlist[l]+DirAdditions[i])
-
-		# Return to Home directory (where HELENA3.py is located)
-		os.chdir(HomeDir)
-
-		return()
-	#enddef
-
 
 	#Takes variablenames and checks if variable is radial.
 	#Returns boolian if variable is radial, used for symmetry options.
@@ -2216,7 +2141,9 @@ def run(argv=None):
 			DirAdditions = ['iprofile_tec2d.pdt','nprofile_tec2d.pdt','iprofile_tec1d.pdt', 'nprofile_tec1d.pdt','iprofile_zones_tec1d.pdt','nprofile_zones_tec1d.pdt']
 			#try: AutoConvProf('./conv_prof.exe',Args,DirAdditions)
 			#except: print('ConvProf Failure:'+Dirlist[l])
-			AutoConvProf('./conv_prof.exe',Args,DirAdditions)
+			auto_conv_prof('./conv_prof.exe', Dirlist[l],
+			               IMATSTATS, IPCMCSPEC,
+			               Args, DirAdditions)
 
 			#Load data from IEDFprofile file and unpack into 1D array.
 			try: rawdata, nn_IEDF = extract_raw_data(Dir, iprofiletec2d[l].split('/')[-1], l)
