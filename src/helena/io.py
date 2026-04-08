@@ -301,3 +301,32 @@ def read_data_from_file(filename, header_idx=0, dimension="2D", orientation="CSV
             output_data.append(float(row[m]))
 
     return output_data, header
+
+
+def create_new_folder(direc, dir_string):
+    # Creates a new folder if one does not already exist.
+    # Takes destination dir and namestring, returns new directory.
+
+    try:
+        new_folder_dir = direc + dir_string + '/'
+        os.mkdir(new_folder_dir, 0o755)
+    except:
+        raise ValueError("Unable to create new folder")
+
+    return new_folder_dir
+
+
+def folder_name_trimmer(dir_string, index=1):
+    # Takes folder names and returns item after requested underscore index.
+    # Note, index > 1 will return between two underscores, not the entire string.
+
+    try:
+        for i in range(0, index):
+            underscoreloc = str(dir_string[::-1]).index('_')
+            cutoff = (len(dir_string) - underscoreloc)
+            name_string = dir_string[cutoff:-1]
+            dir_string = dir_string[:cutoff - 1]
+    except:
+        name_string = str(dir_string[2:-1])
+
+    return name_string

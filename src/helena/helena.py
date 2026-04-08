@@ -21,7 +21,8 @@
 #====================================================================#
 
 from pylab import *
-from .io import get_directories, write_to_csv, write_data_to_file, read_data_from_file
+from .io import get_directories, write_to_csv, write_data_to_file, read_data_from_file, create_new_folder, \
+	folder_name_trimmer
 from .initialisation import get_mesh_and_SI
 from .data import extract_raw_data, read_TEC2D, read_TEC2D_phase, read_geometry
 from .variables import enumerate_variables, enumerate_vectors, variable_interpolator, variable_unit_conversion, azimuthal_phase_conversion
@@ -860,38 +861,6 @@ def run(argv=None):
 	#====================================================================#
 					#UNPACKING AND ORGANIZATION OF DATA#
 	#====================================================================#
-
-	#Creates a new folder if one does not already exist.
-	#Takes destination dir and namestring, returns new directory.
-	def CreateNewFolder(Dir,DirString):
-		try:
-			NewFolderDir = Dir+DirString+'/'
-			#os.mkdir(NewFolderDir, 0755);os.mkdir(NewFolderDir, 755);
-			os.mkdir(NewFolderDir, 0o755);
-		except:
-			a = 1
-		#endtry
-		return(NewFolderDir)
-	#enddef
-
-
-	#Takes folder names and returns item after requested underscore index.
-	#Note, index > 1 will return between two underscores, not the entire string.
-	def FolderNameTrimmer(DirString,Index=1):
-		try:
-			for i in range(0,Index):
-				underscoreloc = str(DirString[::-1]).index('_')
-				cutoff = (len(DirString)-underscoreloc)
-				NameString = DirString[cutoff:-1]
-				DirString = DirString[:cutoff-1]
-			#endfor
-		except:
-			NameString = str(DirString[2:-1])
-		#endtry
-
-		return(NameString)
-	#enddef
-
 
 	#Takes folder directory and creates a movie from .png images contained within.
 	def MakeMovie(FolderDir,Output):
@@ -3529,7 +3498,7 @@ def run(argv=None):
 			Image = ImageExtractor2D(Data[l][process],variable,R_mesh[l],Z_mesh[l])
 
 			#Update X-axis with folder information.
-			Xaxis.append( FolderNameTrimmer(Dirlist[l]) )
+			Xaxis.append(folder_name_trimmer(Dirlist[l]))
 
 			#TREND ANALYSIS - Value at Given Location Comparison.
 			try: Trend.append( Image[Z][R] )
@@ -3538,7 +3507,7 @@ def run(argv=None):
 			#Display Min/Max value trends to terminal if requested.
 			if print_generaltrends == True:
 				Location = '('+str(round(R*dr[l],1))+'cm,'+str(round(Z*dz[l],1))+'cm)'
-				print( FolderNameTrimmer(Dirlist[l]))
+				print(folder_name_trimmer(Dirlist[l]))
 				print( str(variable)+' @ '+Location+':', round(Trend[-1], 5))
 			if print_generaltrends == True and l == numfolders-1:
 				print( '')
@@ -3577,7 +3546,7 @@ def run(argv=None):
 			VariableIndices,VariableStrings = variable_interpolator(VariableIndices, VariableStrings, MinSharedVariables, Globalnumvars)
 
 			#Update X-axis with folder information.
-			Xaxis.append( FolderNameTrimmer(Dirlist[l]) )
+			Xaxis.append(folder_name_trimmer(Dirlist[l]))
 
 			#Obtain radial and axial profiles for further processing.
 			if Orientation == 'Radial':
@@ -3600,7 +3569,7 @@ def run(argv=None):
 			#Display Min/Max value trends to terminal if requested.
 			if print_generaltrends == True:
 				VariableName = VariableLabelMaker(VariableStrings)[p]
-				print( FolderNameTrimmer(Dirlist[l]))
+				print(folder_name_trimmer(Dirlist[l]))
 				print( VariableName+' '+Orientation+'Maximum: ', round(max(MaxValueTrend), 5))
 				print( VariableName+' '+Orientation+'Minimum: ', round(min(MinValueTrend), 5))
 			if print_generaltrends == True and l == numfolders-1:
@@ -4250,7 +4219,7 @@ def run(argv=None):
 
 		for l in range(0,numfolders):
 			# Create new folder to keep output plots.
-			Dir2Dplots = CreateNewFolder(Dirlist[l],'TECPlot2D')
+			Dir2Dplots = create_new_folder(Dirlist[l], 'TECPlot2D')
 
 			# Create VariableIndices for each folder as required.
 			VariableIndices,VariableStrings = enumerate_variables(Variables, Header_TEC2D[l])
@@ -4376,7 +4345,7 @@ def run(argv=None):
 
 				# Write data underpinning current figure in .csv format
 				if Write_CSV == True:
-					CSVDir = CreateNewFolder(Dir2Dplots, '2DPlots_Data')
+					CSVDir = create_new_folder(Dir2Dplots, '2DPlots_Data')
 					CSVRMesh = 'R_Mesh [Cells] '+str(R_mesh[l])+'  :: dR [cm/cell] '+str(dr[l])
 					CSVZMesh = 'Z_Mesh [Cells] '+str(Z_mesh[l])+'  :: dZ [cm/cell] '+str(dz[l])
 					CSVFilename = VariableStrings[i]+'.csv'
@@ -4401,7 +4370,7 @@ def run(argv=None):
 
 				# Write data to ASCII files [OUTDATED FORMAT, TO BE REMOVED]
 				if write_ASCII == True:
-					DirWrite = CreateNewFolder(Dir2Dplots, '2DPlots_Data')
+					DirWrite = create_new_folder(Dir2Dplots, '2DPlots_Data')
 					write_data_to_file(Image, DirWrite + VariableStrings[i],
 									   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
 					if image_plotsheath in ['Radial','Axial'] and i == len(VariableIndices)-1:
@@ -4431,7 +4400,7 @@ def run(argv=None):
 		for l in range(0,numfolders):
 
 			#Create new folder to keep convergence variable folders in.
-			DirMovieicp = CreateNewFolder(Dirlist[l],'Movieicp/')
+			DirMovieicp = create_new_folder(Dirlist[l], 'Movieicp/')
 
 			#Enumerate variable strings in the order they appear in movie_icp.pdt
 			VariableIndices,VariableStrings = enumerate_variables(Variables, Header_movieicp[l])
@@ -4454,7 +4423,7 @@ def run(argv=None):
 			for i in tqdm(range(0,len(VariableIndices))):
 
 				#Create new folder to keep output plots.
-				DirMoviePlots = CreateNewFolder(DirMovieicp,'2DIterPlots_'+VariableStrings[i]+'/')
+				DirMoviePlots = create_new_folder(DirMovieicp, '2DIterPlots_' + VariableStrings[i] + '/')
 
 				#Create empty image array based on mesh size and symmetry options.
 				try:
@@ -4522,7 +4491,7 @@ def run(argv=None):
 
 					# Write data underpinning current figure in .csv format
 					if Write_CSV == True:
-						CSVDir = CreateNewFolder(DirMoviePlots, '2DPlots_Data')
+						CSVDir = create_new_folder(DirMoviePlots, '2DPlots_Data')
 						CSVRMesh = 'R_Mesh [Cells] '+str(R_mesh[l])+'  :: dR [cm/cell] '+str(dr[l])
 						CSVZMesh = 'Z_Mesh [Cells] '+str(Z_mesh[l])+'  :: dZ [cm/cell] '+str(dz[l])
 						CSVCurITER = str( MovieIterlist[l][k].replace(" ", "") )
@@ -4548,8 +4517,8 @@ def run(argv=None):
 
 					#Write data to ASCII files if requested.
 					if write_ASCII == True:
-						DirWrite = CreateNewFolder(DirMovieicp, '2DPlots_Data')
-						DirWriteVar = CreateNewFolder(DirWrite, VariableStrings[i]+'_Data')
+						DirWrite = create_new_folder(DirMovieicp, '2DPlots_Data')
+						DirWriteVar = create_new_folder(DirWrite, VariableStrings[i] + '_Data')
 						write_data_to_file(Image, DirWriteVar + VariableStrings[i] + '_' + str(IterArray[k]).zfill(4),
 										   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
 						if image_plotsheath in ['Radial','Axial'] and k == len(VariableIndices)-1:
@@ -4562,8 +4531,8 @@ def run(argv=None):
 				#=====#
 
 				#Create .mp4 movie from completed images.
-				Prefix = FolderNameTrimmer(Dirlist[l])
-				MakeMovie(DirMoviePlots,Prefix+'_'+VariableStrings[i])
+				Prefix = folder_name_trimmer(Dirlist[l])
+				MakeMovie(DirMoviePlots, Prefix + '_' + VariableStrings[i])
 			#endfor
 		#endif
 
@@ -4675,7 +4644,7 @@ def run(argv=None):
 			#Generate the radial (horizontal) lineouts for a specific height.
 			if len(radialprofiles) > 0:
 				#Create folder to keep output plots.
-				DirRlineouts = CreateNewFolder(Dirlist[l],'1DRadial_Profiles/')
+				DirRlineouts = create_new_folder(Dirlist[l], '1DRadial_Profiles/')
 
 				#Loop over all required variables and requested profile locations.
 				for i in tqdm(range(0,len(VariableIndices))):
@@ -4706,7 +4675,7 @@ def run(argv=None):
 						#Write data to ASCII files if requested.
 						if write_ASCII == True:
 							SaveString = '_R='+str(round((radialprofiles[j])*dz[l], 2))+'cm'
-							DirWrite = CreateNewFolder(DirRlineouts, 'Radial_Data')
+							DirWrite = create_new_folder(DirRlineouts, 'Radial_Data')
 							write_data_to_file([Raxis, Rlineout], DirWrite + VariableStrings[i] + SaveString,
 											   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
 						#endif
@@ -4723,7 +4692,7 @@ def run(argv=None):
 
 					# Write data underpinning current figure in .csv format
 					if Write_CSV == True:
-						CSVDir = CreateNewFolder(DirRlineouts, '1Dplots_Data')
+						CSVDir = create_new_folder(DirRlineouts, '1Dplots_Data')
 						CSVRMesh = 'R_Mesh [Cells] '+str(R_mesh[l])+'  :: dR [cm/cell] '+str(dr[l])
 						CSVZMesh = 'Z_Mesh [Cells] '+str(Z_mesh[l])+'  :: dZ [cm/cell] '+str(dz[l])
 						CSVFilename = VariableStrings[i]+'.csv'
@@ -4746,7 +4715,7 @@ def run(argv=None):
 			#Generate the vertical (height) lineouts for a given radius.
 			if len(axialprofiles) > 0:
 				#Create folder to keep output plots.
-				DirZlineouts = CreateNewFolder(Dirlist[l],'1DAxial_Profiles/')
+				DirZlineouts = create_new_folder(Dirlist[l], '1DAxial_Profiles/')
 				Legendlist = list()
 
 				#Collect and plot required data.
@@ -4778,7 +4747,7 @@ def run(argv=None):
 						#Write data to ASCII files if requested.
 						if write_ASCII == True:
 							SaveString = '_Z='+str(round((axialprofiles[j])*dr[l], 2))+'cm'
-							DirWrite = CreateNewFolder(DirZlineouts, 'Axial_Data')
+							DirWrite = create_new_folder(DirZlineouts, 'Axial_Data')
 							write_data_to_file([Zaxis, Zlineout[::-1]], DirWrite + VariableStrings[i] + SaveString,
 											   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
 						#endif
@@ -4795,7 +4764,7 @@ def run(argv=None):
 
 					# Write data underpinning current figure in .csv format
 					if Write_CSV == True:
-						CSVDir = CreateNewFolder(DirZlineouts, '1Dplots_Data')
+						CSVDir = create_new_folder(DirZlineouts, '1Dplots_Data')
 						CSVRMesh = 'R_Mesh [Cells] '+str(R_mesh[l])+'  :: dR [cm/cell] '+str(dr[l])
 						CSVZMesh = 'Z_Mesh [Cells] '+str(Z_mesh[l])+'  :: dZ [cm/cell] '+str(dz[l])
 						CSVFilename = VariableStrings[i]+'.csv'
@@ -4829,7 +4798,7 @@ def run(argv=None):
 	if savefig_compareprofiles == True:
 
 		#Create folder to keep output plots.
-		DirComparisons = CreateNewFolder(os.getcwd(),'/1D Comparisons')
+		DirComparisons = create_new_folder(os.getcwd(), '/1D Comparisons')
 
 		#Generate SI scale axes for lineout plots.
 		Raxis = GenerateAxis('Radial',ISYMlist[l])
@@ -4840,7 +4809,7 @@ def run(argv=None):
 
 			#Create new folder for each axial or radial slice.
 			ProfileFolder = 'Z='+str(round((radialprofiles[j])*dz[l], 1))+'cm'
-			DirProfile = CreateNewFolder(DirComparisons,ProfileFolder)
+			DirProfile = create_new_folder(DirComparisons, ProfileFolder)
 
 			#For each requested comparison variable.
 			for k in tqdm(range(0,len(Variables))):
@@ -4864,7 +4833,7 @@ def run(argv=None):
 					VariableIndices,VariableStrings = variable_interpolator(VariableIndices, VariableStrings, MinSharedVariables, Globalnumvars)
 
 					#Update legend with folder information.
-					Legendlist.append( FolderNameTrimmer(Dirlist[l]) )
+					Legendlist.append(folder_name_trimmer(Dirlist[l]))
 					Ylabels = VariableLabelMaker(VariableStrings)
 
 					#Plot all radial profiles for all variables in one folder.
@@ -4878,7 +4847,7 @@ def run(argv=None):
 					if write_ASCII == True:
 						if l == 0:
 							WriteFolder = 'Z='+str(round((radialprofiles[j])*dz[l], 1))+'cm_Data'
-							DirWrite = CreateNewFolder(DirComparisons, WriteFolder)
+							DirWrite = create_new_folder(DirComparisons, WriteFolder)
 							write_data_to_file(Raxis + ['\n'], DirWrite + VariableStrings[k], 'w',
 											   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
 						#endif
@@ -4905,7 +4874,7 @@ def run(argv=None):
 
 			#Create new folder for each axial or radial slice.
 			ProfileFolder = 'R='+str(round((axialprofiles[j])*dr[l], 1))+'cm'
-			DirProfile = CreateNewFolder(DirComparisons,ProfileFolder)
+			DirProfile = create_new_folder(DirComparisons, ProfileFolder)
 
 			#For each requested comparison variable.
 			for k in tqdm(range(0,len(Variables))):
@@ -4929,7 +4898,7 @@ def run(argv=None):
 					VariableIndices,VariableStrings = variable_interpolator(VariableIndices, VariableStrings, MinSharedVariables, Globalnumvars)
 
 					#Update legend with folder information.
-					Legendlist.append( FolderNameTrimmer(Dirlist[l]) )
+					Legendlist.append(folder_name_trimmer(Dirlist[l]))
 					Ylabels = VariableLabelMaker(VariableStrings)
 
 					#Obtain axial profile for each folder of the current variable.
@@ -4943,7 +4912,7 @@ def run(argv=None):
 					if write_ASCII == True:
 						if l == 0:
 							WriteFolder = 'R='+str(round((axialprofiles[j])*dr[l], 1))+'cm_Data'
-							DirWrite = CreateNewFolder(DirComparisons, WriteFolder)
+							DirWrite = create_new_folder(DirComparisons, WriteFolder)
 							write_data_to_file(Zaxis + ['\n'], DirWrite + VariableStrings[k], 'w',
 											   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
 						#endif
@@ -4979,7 +4948,7 @@ def run(argv=None):
 		#For each folder in turn
 		for l in range(0,numfolders):
 			#Create global multivar folder.
-			Dirlineouts = CreateNewFolder(Dirlist[l],'multivar_Profiles/')
+			Dirlineouts = create_new_folder(Dirlist[l], 'multivar_Profiles/')
 
 			#Create VariableIndices for each folder as required.
 			VariableIndices,VariableStrings = enumerate_variables(Variables, Header_TEC2D[l])
@@ -5005,7 +4974,7 @@ def run(argv=None):
 
 						#Create folder to keep output plots.
 						Slice = str(round((axialprofiles[j])*dr[l], 1))
-						DirZlineouts = CreateNewFolder(Dirlineouts,'R='+Slice+'cm/')
+						DirZlineouts = create_new_folder(Dirlineouts, 'R=' + Slice + 'cm/')
 
 						#Create legendlist
 						Legendlist = list()
@@ -5043,7 +5012,7 @@ def run(argv=None):
 			#Generate the horizontal (Radial) lineouts for a given radius.
 			if len(radialprofiles) > 0:
 				#Create global multivar folder.
-				Dirlineouts = CreateNewFolder(Dirlist[l],'multivar_Profiles/')
+				Dirlineouts = create_new_folder(Dirlist[l], 'multivar_Profiles/')
 
 				#Generate SI scale axes for lineout plots.
 				Raxis = GenerateAxis('Radial',ISYMlist[l])
@@ -5058,7 +5027,7 @@ def run(argv=None):
 
 						#Create folder to keep output plots.
 						Slice = str(round((radialprofiles[j])*dz[l], 1))
-						DirRlineouts = CreateNewFolder(Dirlineouts,'Z='+Slice+'cm/')
+						DirRlineouts = create_new_folder(Dirlineouts, 'Z=' + Slice + 'cm/')
 
 						#Create legendlist
 						Legendlist = list()
@@ -5110,7 +5079,7 @@ def run(argv=None):
 		for l in range(0,numfolders):
 
 			#Create new diagnostic output folder and initiate required lists.
-			DirTemporal = CreateNewFolder(Dirlist[l],'Movieicp/')
+			DirTemporal = create_new_folder(Dirlist[l], 'Movieicp/')
 
 			#Enumerate variable strings in the order they appear in movie_icp.pdt
 			VariableIndices,VariableStrings = enumerate_variables(Variables, Header_movieicp[l])
@@ -5132,7 +5101,7 @@ def run(argv=None):
 			#Generate the radial (horizontal) lineouts for a specific height.
 			if len(radialprofiles) > 0:
 				#Create folder to keep output plots.
-				DirRlineouts = CreateNewFolder(DirTemporal,'1DRadial_Profiles/')
+				DirRlineouts = create_new_folder(DirTemporal, '1DRadial_Profiles/')
 
 				#Loop over all required variables and requested profile locations.
 				for i in tqdm(range(0,len(VariableIndices))):
@@ -5140,7 +5109,7 @@ def run(argv=None):
 
 						#Create new folder per radial profile
 						Slice = str(round((radialprofiles[j])*dz[l], 1))
-						DirProfile = CreateNewFolder(DirRlineouts,VariableStrings[i]+'_Z='+Slice+'cm')
+						DirProfile = create_new_folder(DirRlineouts, VariableStrings[i] + '_Z=' + Slice + 'cm')
 
 						#Refresh lists
 						Rlineoutlist = list()
@@ -5170,7 +5139,7 @@ def run(argv=None):
 
 							#Write data to ASCII files if requested.
 							if write_ASCII == True:
-								DirWrite = CreateNewFolder(DirProfile, 'Radial_Data')
+								DirWrite = create_new_folder(DirProfile, 'Radial_Data')
 								SaveString1 = '_R='+str(round((radialprofiles[j])*dz[l], 2))+'cm'
 								SaveString2 = '_'+str(IterArray[k]).zfill(4)
 								SaveString = SaveString1+SaveString2
@@ -5207,7 +5176,7 @@ def run(argv=None):
 			#Generate the vertical (height) lineouts for a given radius.
 			if len(axialprofiles) > 0:
 				#Create folder to keep output plots.
-				DirZlineouts = CreateNewFolder(DirTemporal,'1DAxial_Profiles/')
+				DirZlineouts = create_new_folder(DirTemporal, '1DAxial_Profiles/')
 
 				#Collect and plot required data.
 				for i in tqdm(range(0,len(VariableIndices))):
@@ -5215,7 +5184,7 @@ def run(argv=None):
 
 						#Create new folder per axial profile
 						Slice = str(round((axialprofiles[j])*dr[l], 1))
-						DirProfile = CreateNewFolder(DirZlineouts,VariableStrings[i]+'_R='+Slice+'cm')
+						DirProfile = create_new_folder(DirZlineouts, VariableStrings[i] + '_R=' + Slice + 'cm')
 
 						#Refresh lists
 						Zlineoutlist = list()
@@ -5245,7 +5214,7 @@ def run(argv=None):
 
 							#Write data to ASCII files if requested.
 							if write_ASCII == True:
-								DirWrite = CreateNewFolder(DirProfile, 'Axial_Data')
+								DirWrite = create_new_folder(DirProfile, 'Axial_Data')
 								SaveString1 = '_R='+str(round((axialprofiles[j])*dr[l], 2))+'cm'
 								SaveString2 = '_'+str(IterArray[k]).zfill(4)
 								SaveString = SaveString1+SaveString2
@@ -5295,11 +5264,11 @@ def run(argv=None):
 		for l in range(0,numfolders):
 
 			# Create new diagnostic output folder and initiate required lists.
-			DirTemporal = CreateNewFolder(Dirlist[l],'Movieicp/')
+			DirTemporal = create_new_folder(Dirlist[l], 'Movieicp/')
 
 			# Create new folder and initiate required lists.
 			TemporalTrends,Xaxis = list(),list()
-			DirMeshAve = CreateNewFolder(DirTemporal,'1DTimeAxis_Profiles/')
+			DirMeshAve = create_new_folder(DirTemporal, '1DTimeAxis_Profiles/')
 
 			# Enumerate variable strings in the order they appear in movie_icp.pdt
 			VariableIndices,VariableStrings = enumerate_variables(Variables, Header_movieicp[l])
@@ -5347,7 +5316,7 @@ def run(argv=None):
 
 				# Write data underpinning current figure in .csv format
 				if Write_CSV == True:
-					CSVDir = CreateNewFolder(DirMeshAve, '1DPlots_Data')
+					CSVDir = create_new_folder(DirMeshAve, '1DPlots_Data')
 					CSVRMesh = 'R_Mesh [Cells] '+str(R_mesh[l])+'  :: dR [cm/cell] '+str(dr[l])
 					CSVZMesh = 'Z_Mesh [Cells] '+str(Z_mesh[l])+'  :: dZ [cm/cell] '+str(dz[l])
 					CSVTMax = 'Sim_Time '+str( np.round(Xaxis[-1],9) )+' [ms]'
@@ -5369,7 +5338,7 @@ def run(argv=None):
 
 				# Write data to ASCII files if requested.
 				if write_ASCII == True:
-					DirWrite = CreateNewFolder(DirMeshAve, '1DTimeAxis_Data')
+					DirWrite = create_new_folder(DirMeshAve, '1DTimeAxis_Data')
 					write_data_to_file(Xaxis, DirWrite + VariableStrings[i], 'w',
 									   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
 					write_data_to_file(['\n'] + TemporalProfile, DirWrite + VariableStrings[i], 'a',
@@ -5397,7 +5366,7 @@ def run(argv=None):
 			ax.set_ylim(0,1)
 
 			# Save figure.
-			savefig(DirMeshAve+FolderNameTrimmer(Dirlist[l])+'_Normalised'+ext)
+			savefig(DirMeshAve + folder_name_trimmer(Dirlist[l]) + '_Normalised' + ext)
 			clearfigures(fig)
 		#endfor
 
@@ -5419,7 +5388,7 @@ def run(argv=None):
 		for l in range(0,numfolders):
 
 			#Create new folder to keep convergence variable folders in.
-			DirConvergence = CreateNewFolder(Dirlist[l],'Movieicp/')
+			DirConvergence = create_new_folder(Dirlist[l], 'Movieicp/')
 
 			#Enumerate variable strings in the order they appear in movie_icp.pdt
 			VariableIndices,VariableStrings = enumerate_variables(Variables, Header_movieicp[l])
@@ -5528,7 +5497,7 @@ def run(argv=None):
 				#endfor
 
 				#Save figure.
-				savefig(DirConvergence+FolderNameTrimmer(Dirlist[l])+'_Convergence'+ext)
+				savefig(DirConvergence + folder_name_trimmer(Dirlist[l]) + '_Convergence' + ext)
 				clearfigures(fig)
 			#endfor
 		#endif
@@ -5598,7 +5567,7 @@ def run(argv=None):
 		for l in range(0,numfolders):
 
 			#Create new folder for keeping EEDF/IEDF if required.
-			DirIEDF = CreateNewFolder(Dirlist[l],'EDFplots')
+			DirIEDF = create_new_folder(Dirlist[l], 'EDFplots')
 
 			#Create VariableIndices for requested EDF species and extract images.
 			VariableIndices,VariableStrings = enumerate_variables(IEDFVariables, Header_IEDF[l])
@@ -5674,7 +5643,7 @@ def run(argv=None):
 
 				# Write data underpinning current figure in .csv format
 				if Write_CSV == True:
-					CSVDir = CreateNewFolder(DirIEDF, 'EDF_Data')
+					CSVDir = create_new_folder(DirIEDF, 'EDF_Data')
 					CSVEnergyAxis = 'Energy_Range_[eV] '+str([eVaxis[0],eVaxis[-1]])+'  :: Bin_Size_[eV] '+str(deV)
 					CSVAngleAxis =  'Angle_Range_[Deg] '+str([-45,45])+'  :: Bin_Size_[Deg] '+str(45./len(EDFImage))
 					CSVFilename = VariableStrings[i].replace(' ','')+'.csv'
@@ -5691,7 +5660,7 @@ def run(argv=None):
 				# Write data underpinning current figure in ASCII format		- OUTDATED, TO REMOVE
 				if write_ASCII == True:
 					if i == 0:
-						DirASCII = CreateNewFolder(DirIEDF, 'EDF_Data')
+						DirASCII = create_new_folder(DirIEDF, 'EDF_Data')
 						write_data_to_file(eVaxis, DirASCII + VariableStrings[i], 'w',
 										   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
 					#endif
@@ -5722,11 +5691,11 @@ def run(argv=None):
 			fig,ax = figure()
 
 			#Create new global trend folder if it doesn't exist already.
-			TrendVariable = list(filter(lambda x: x.isalpha(), FolderNameTrimmer(Dirlist[0])))	#List of discrete chars
+			TrendVariable = list(filter(lambda x: x.isalpha(), folder_name_trimmer(Dirlist[0])))	#List of discrete chars
 			TrendVariable = ''.join(TrendVariable)												#Single string of chars
-			DirTrends = CreateNewFolder(os.getcwd()+'/',TrendVariable+' Trends')
+			DirTrends = create_new_folder(os.getcwd() + '/', TrendVariable + ' Trends')
 			#Create folder for IEDF trends if it doesn't exist already.
-			DirIEDFTrends = CreateNewFolder(DirTrends,'IEDF Trends')
+			DirIEDFTrends = create_new_folder(DirTrends, 'IEDF Trends')
 
 			#For all simulation folders.
 			for l in range(0,numfolders):
@@ -5734,7 +5703,7 @@ def run(argv=None):
 
 				#Create VariableIndices for requested EDF species and extract images.
 				VariableIndices,VariableStrings = enumerate_variables(IEDFVariables, Header_IEDF[l])
-				Legendlist.append(FolderNameTrimmer(Dirlist[l]))
+				Legendlist.append(folder_name_trimmer(Dirlist[l]))
 
 				#Extract image from required variable and flatten angular distribution profile.
 				Image = ImageExtractor2D(DataIEDF[l][VariableIndices[i]],Rmesh=EDFangle,Zmesh=EDFbins)
@@ -5920,8 +5889,8 @@ def run(argv=None):
 			#Write data to ASCII format datafile if requested.
 			if write_ASCII == True:
 				if i == 0:
-					DirASCII = CreateNewFolder(DirTrends,'Trend_Data')
-					DirASCIIIEDF = CreateNewFolder(DirASCII,'IEDF_Data')
+					DirASCII = create_new_folder(DirTrends, 'Trend_Data')
+					DirASCIIIEDF = create_new_folder(DirASCII, 'IEDF_Data')
 				#endif
 				write_data_to_file(Legendlist + ['\n'] + Total_eV, DirASCIIIEDF + VariableStrings[i] + '_Total', 'w',
 								   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
@@ -6028,9 +5997,9 @@ def run(argv=None):
 	if savefig_trendphaseaveraged == True or print_generaltrends == True:
 
 		#Create trend folder for outputs - Assumes that scanned variable is within trimmed foler name
-		TrendVariable = list(filter(lambda x: x.isalpha(), FolderNameTrimmer(Dirlist[0])))	#List of discrete chars
+		TrendVariable = list(filter(lambda x: x.isalpha(), folder_name_trimmer(Dirlist[0])))	#List of discrete chars
 		TrendVariable = ''.join(TrendVariable)												#Single string of chars
-		DirTrends = CreateNewFolder(os.getcwd()+'/',TrendVariable+' Trends')
+		DirTrends = create_new_folder(os.getcwd() + '/', TrendVariable + ' Trends')
 
 		#For each requested comparison variable.
 		for k in tqdm(range(0,len(Variables))):
@@ -6059,7 +6028,7 @@ def run(argv=None):
 			for j in range(0,len(axialprofiles)):
 
 				#Create folder for axial trends if needed.
-				DirAxialTrends = CreateNewFolder(DirTrends,'Axial Trends')
+				DirAxialTrends = create_new_folder(DirTrends, 'Axial Trends')
 
 				#Take Trend at Given Location or Default to Min/Max Trends.
 				if len(probeloc) == 2:
@@ -6095,8 +6064,8 @@ def run(argv=None):
 				#Write data to ASCII format datafile if requested.
 				if write_ASCII == True:
 					if j == 0:
-						DirASCII = CreateNewFolder(DirTrends,'Trend_Data')
-						DirASCIIAxial = CreateNewFolder(DirASCII,'Axial_Data')
+						DirASCII = create_new_folder(DirTrends, 'Trend_Data')
+						DirASCIIAxial = create_new_folder(DirASCII, 'Axial_Data')
 						write_data_to_file(Xaxis + ['\n'], DirASCIIAxial + VariableStrings[k] + '_Trends', 'w',
 										   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
 					#endif
@@ -6122,7 +6091,7 @@ def run(argv=None):
 			for j in range(0,len(radialprofiles)):
 
 				#Create folder for axial trends if needed.
-				DirRadialTrends = CreateNewFolder(DirTrends,'Radial Trends')
+				DirRadialTrends = create_new_folder(DirTrends, 'Radial Trends')
 
 				#Take Trend at Given Location or Default to Min/Max Trends.
 				if len(probeloc) == 2:
@@ -6158,8 +6127,8 @@ def run(argv=None):
 				#Write data to ASCII format datafile if requested.
 				if write_ASCII == True:
 					if j == 0:
-						DirASCII = CreateNewFolder(DirTrends,'Trend_Data')
-						DirASCIIRadial = CreateNewFolder(DirASCII,'Radial_Data')
+						DirASCII = create_new_folder(DirTrends, 'Trend_Data')
+						DirASCIIRadial = create_new_folder(DirASCII, 'Radial_Data')
 						write_data_to_file(Xaxis + ['\n'], DirASCIIRadial + VariableStrings[k] + '_Trends', 'w',
 										   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
 					#endif
@@ -6185,9 +6154,9 @@ def run(argv=None):
 	if savefig_trendphaseaveraged == True or print_DCbias == True:
 
 		#Create Trend folder to keep output plots.
-		TrendVariable = list(filter(lambda x: x.isalpha(), FolderNameTrimmer(Dirlist[0])))	#List of discrete chars
+		TrendVariable = list(filter(lambda x: x.isalpha(), folder_name_trimmer(Dirlist[0])))	#List of discrete chars
 		TrendVariable = ''.join(TrendVariable)												#Single string of chars
-		DirTrends = CreateNewFolder(os.getcwd()+'/',TrendVariable+' Trends')
+		DirTrends = create_new_folder(os.getcwd() + '/', TrendVariable + ' Trends')
 
 		#Initiate lists required for storing data.
 		Xaxis = list()
@@ -6200,7 +6169,7 @@ def run(argv=None):
 			Process,Variable = enumerate_variables(['P-POT'], Header_TEC2D[l])
 
 			#Update X-axis with folder information.
-			Xaxis.append( FolderNameTrimmer(Dirlist[l]) )
+			Xaxis.append(folder_name_trimmer(Dirlist[l]))
 
 			#Locate powered electrode for bias extraction.
 			Rlineoutloc = WaveformLoc(electrodeloc,'2D')[0]
@@ -6245,7 +6214,7 @@ def run(argv=None):
 
 		#Write data to ASCII format datafile if requested.
 		if write_ASCII == True:
-			DirASCII = CreateNewFolder(DirTrends,'Trend_Data')
+			DirASCII = create_new_folder(DirTrends, 'Trend_Data')
 			DCASCII = [Xaxis,DCbias]
 			write_data_to_file(DCASCII, DirASCII + 'DCbias_Trends',
 							   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
@@ -6273,16 +6242,16 @@ def run(argv=None):
 	if savefig_trendphaseaveraged == True or print_totalpower == True:
 
 		#Create Trend folder to keep output plots.
-		TrendVariable = list(filter(lambda x: x.isalpha(), FolderNameTrimmer(Dirlist[0])))	#List of discrete chars
+		TrendVariable = list(filter(lambda x: x.isalpha(), folder_name_trimmer(Dirlist[0])))	#List of discrete chars
 		TrendVariable = ''.join(TrendVariable)												#Single string of chars
-		DirTrends = CreateNewFolder(os.getcwd()+'/',TrendVariable+' Trends')
+		DirTrends = create_new_folder(os.getcwd() + '/', TrendVariable + ' Trends')
 
 		#Create required lists.
 		RequestedPowers,DepositedPowerList = list(),list()
 		Xaxis,Powers = list(),list()
 
 		#Update X-axis with folder information.
-		for l in range(0,numfolders): Xaxis.append( FolderNameTrimmer(Dirlist[l]) )
+		for l in range(0,numfolders): Xaxis.append(folder_name_trimmer(Dirlist[l]))
 
 		#Create list of requested power variables and ensure they also exist in all compared folders
 		for i in range(0,len(Variables)):
@@ -6376,7 +6345,7 @@ def run(argv=None):
 
 		#Write data to ASCII format datafile if requested.
 		if write_ASCII == True:
-			DirASCII, TotalPowerASCII = CreateNewFolder(DirTrends,'Trend_Data'), [Xaxis]
+			DirASCII, TotalPowerASCII = create_new_folder(DirTrends, 'Trend_Data'), [Xaxis]
 			for k in range(0,len(RequestedPowers)): TotalPowerASCII.append(Powers[k])
 			write_data_to_file(TotalPowerASCII, DirASCII + 'RFPower_Trends',
 							   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
@@ -6406,9 +6375,9 @@ def run(argv=None):
 		if savefig_trendphaseaveraged == True or print_thrust == True:
 
 			#Create Trend folder to keep output plots.
-			TrendVariable = list(filter(lambda x: x.isalpha(), FolderNameTrimmer(Dirlist[0])))	#List of discrete chars
+			TrendVariable = list(filter(lambda x: x.isalpha(), folder_name_trimmer(Dirlist[0])))	#List of discrete chars
 			TrendVariable = ''.join(TrendVariable)												#Single string of chars
-			DirTrends = CreateNewFolder(os.getcwd()+'/',TrendVariable+' Trends')
+			DirTrends = create_new_folder(os.getcwd() + '/', TrendVariable + ' Trends')
 
 			#Initiate lists required for storing data.
 			NeutralThrustlist,IonThrustlist,PresThrustlist,Thrustlist = list(),list(),list(),list()
@@ -6424,7 +6393,7 @@ def run(argv=None):
 			for l in range(0,numfolders):
 
 				#Update X-axis with folder information.
-				Xaxis.append( FolderNameTrimmer(Dirlist[l]) )
+				Xaxis.append(folder_name_trimmer(Dirlist[l]))
 
 				#Extract data required for Thrust calculations, discharge plane (Z) = thrustloc.
 				VariableIndices,VariableStrings = enumerate_variables(['VZ-NEUTRAL'], Header_TEC2D[l])
@@ -6602,7 +6571,7 @@ def run(argv=None):
 
 			#Write data to ASCII format datafile if requested.
 			if write_ASCII == True:
-				DirASCII = CreateNewFolder(DirTrends,'Trend_Data')
+				DirASCII = create_new_folder(DirTrends, 'Trend_Data')
 				write_data_to_file(Xaxis + ['\n'], DirASCII + 'Thrust_Trends', 'w',
 								   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
 				write_data_to_file(Thrustlist + ['\n'], DirASCII + 'Thrust_Trends', 'a',
@@ -6660,9 +6629,9 @@ def run(argv=None):
 	#		Might be worth considering an overhaul... but it works for now.
 
 		#Create Trend folder to keep output plots.
-		TrendVariable = list(filter(lambda x: x.isalpha(), FolderNameTrimmer(Dirlist[0])))	#List of discrete chars
+		TrendVariable = list(filter(lambda x: x.isalpha(), folder_name_trimmer(Dirlist[0])))	#List of discrete chars
 		TrendVariable = ''.join(TrendVariable)												#Single string of chars
-		DirTrends = CreateNewFolder(os.getcwd()+'/',TrendVariable+' Trends')
+		DirTrends = create_new_folder(os.getcwd() + '/', TrendVariable + ' Trends')
 
 		#Initialize any required lists.
 		Xaxis,SxLocExtent,SxMaxExtent = list(),list(),list()
@@ -6686,7 +6655,7 @@ def run(argv=None):
 		SxMeanExtent,SxMeanExtentArray = list(),list()
 		#For all selected simulations, obtain Xaxis, sheath value and save to array.
 		for l in range(0,numfolders):
-			Xaxis.append( FolderNameTrimmer(Dirlist[l]) )
+			Xaxis.append(folder_name_trimmer(Dirlist[l]))
 
 			#Obtain sheath thickness array for current folder
 			Sx,SxAxis = CalcSheathExtent(folderidx=l)
@@ -6715,7 +6684,7 @@ def run(argv=None):
 
 		#Write trend data to ASCII format datafile if requested.
 		if write_ASCII == True:
-			DirASCII = CreateNewFolder(DirTrends,'Trend_Data')
+			DirASCII = create_new_folder(DirTrends, 'Trend_Data')
 			write_data_to_file(Xaxis, DirASCII + 'Sx-Avg_Trends', 'w',
 							   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
 			write_data_to_file('\n', DirASCII + 'Sx-Avg_Trends', 'w',
@@ -6747,9 +6716,9 @@ def run(argv=None):
 		if savefig_trendphaseaveraged == True or print_Knudsennumber == True:
 
 			#Create Trend folder to keep output plots.
-			TrendVariable = list(filter(lambda x: x.isalpha(), FolderNameTrimmer(Dirlist[0])))	#List of discrete chars
+			TrendVariable = list(filter(lambda x: x.isalpha(), folder_name_trimmer(Dirlist[0])))	#List of discrete chars
 			TrendVariable = ''.join(TrendVariable)												#Single string of chars
-			DirTrends = CreateNewFolder(os.getcwd()+'/',TrendVariable+' Trends')
+			DirTrends = create_new_folder(os.getcwd() + '/', TrendVariable + ' Trends')
 
 			#Initiate lists required for storing data.
 			KnudsenAverage,Xaxis = list(),list()
@@ -6766,7 +6735,7 @@ def run(argv=None):
 				Sx,SxAxis = CalcSheathExtent(folderidx=l)
 
 				#Update X-axis with folder information.
-				Xaxis.append( FolderNameTrimmer(Dirlist[l]) )
+				Xaxis.append(folder_name_trimmer(Dirlist[l]))
 
 				#Create empty image array based on mesh size and symmetry options.
 				numrows = len(Data[l][0])/R_mesh[l]
@@ -6798,10 +6767,10 @@ def run(argv=None):
 				#endif
 
 				#Create new folder to keep 2D output plots.
-				Dir2Dplots = CreateNewFolder(Dirlist[l],'TECPlot2D')
+				Dir2Dplots = create_new_folder(Dirlist[l], 'TECPlot2D')
 				#Write image data to ASCII format datafile if requested.
 				if write_ASCII == True:
-					DirASCII = CreateNewFolder(Dir2Dplots,'2DPlots_Data')
+					DirASCII = create_new_folder(Dir2Dplots, '2DPlots_Data')
 					write_data_to_file(Image, DirASCII + 'Kn', 'w',
 									   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
 				#endif
@@ -6827,7 +6796,7 @@ def run(argv=None):
 
 			#Write trend data to ASCII format datafile if requested.
 			if write_ASCII == True:
-				DirASCII = CreateNewFolder(DirTrends,'Trend_Data')
+				DirASCII = create_new_folder(DirTrends, 'Trend_Data')
 				write_data_to_file(Xaxis, DirASCII + 'Kn_Trends', 'w',
 								   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
 				write_data_to_file('\n', DirASCII + 'Kn_Trends', 'w',
@@ -6862,9 +6831,9 @@ def run(argv=None):
 		if savefig_trendphaseaveraged == True or print_Reynolds == True:
 
 			#Create Trend folder to keep output plots.
-			TrendVariable = list(filter(lambda x: x.isalpha(), FolderNameTrimmer(Dirlist[0])))	#List of discrete chars
+			TrendVariable = list(filter(lambda x: x.isalpha(), folder_name_trimmer(Dirlist[0])))	#List of discrete chars
 			TrendVariable = ''.join(TrendVariable)												#Single string of chars
-			DirTrends = CreateNewFolder(os.getcwd()+'/',TrendVariable+' Trends')
+			DirTrends = create_new_folder(os.getcwd() + '/', TrendVariable + ' Trends')
 
 			#Initiate lists required for storing data.
 			AverageSoundSpeed,Xaxis = list(),list()
@@ -6903,7 +6872,7 @@ def run(argv=None):
 				#endif
 
 				#Update X-axis with folder information.
-				Xaxis.append( FolderNameTrimmer(Dirlist[l]) )
+				Xaxis.append(folder_name_trimmer(Dirlist[l]))
 
 				#Calculate 2D sound speed image using neutral density and pressure
 				Image = CalcSoundSpeed(NeutralDensity,Pressure,Dimension='2D')
@@ -6916,10 +6885,10 @@ def run(argv=None):
 				#endif
 
 				#Create new folder to keep 2D output plots.
-				Dir2Dplots = CreateNewFolder(Dirlist[l],'TECPlot2D')
+				Dir2Dplots = create_new_folder(Dirlist[l], 'TECPlot2D')
 				#Write image data to ASCII format datafile if requested.
 				if write_ASCII == True:
-					DirASCII = CreateNewFolder(Dir2Dplots,'2DPlots_Data')
+					DirASCII = create_new_folder(Dir2Dplots, '2DPlots_Data')
 					write_data_to_file(Image, DirASCII + 'Cs', 'w',
 									   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
 				#endif
@@ -6946,7 +6915,7 @@ def run(argv=None):
 
 			#Write trend data to ASCII format datafile if requested.
 			if write_ASCII == True:
-				DirASCII = CreateNewFolder(DirTrends,'Trend_Data')
+				DirASCII = create_new_folder(DirTrends, 'Trend_Data')
 				write_data_to_file(Xaxis, DirASCII + 'Cs_Trends', 'w',
 								   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
 				write_data_to_file('\n', DirASCII + 'Cs_Trends', 'w',
@@ -7048,8 +7017,8 @@ def run(argv=None):
 		for l in range(0,numfolders):
 
 			#Create global folders to keep output plots and collect graph title.
-			Dirphaseresolved = CreateNewFolder(Dirlist[l],'1DPhase')
-			VariedValuelist.append( FolderNameTrimmer(Dirlist[l]) )
+			Dirphaseresolved = create_new_folder(Dirlist[l], '1DPhase')
+			VariedValuelist.append(folder_name_trimmer(Dirlist[l]))
 
 			#Create VariableIndices for each folder as required. (Always get 'E','AR+','PPOT')
 			PhaseData,Phaselist,proclist,VariableStrings = read_TEC2D_phase(l, PhaseVariables, Dir,
@@ -7092,7 +7061,7 @@ def run(argv=None):
 			#endfor
 			#ax.plot(Phaseaxis,ElectrodeBias, 'k--', lw=2)
 
-			Title = 'Phase-Resolved Voltage Waveforms for '+FolderNameTrimmer(Dirlist[l])
+			Title = 'Phase-Resolved Voltage Waveforms for ' + folder_name_trimmer(Dirlist[l])
 			Legend = ['Waveform Vpp: '+str(round(ElectrodeVpp[2],2))+'V']
 			Xlabel,Ylabel = 'Phase [$\omega$t/2$\pi$]','Electrode Potential [V]'
 			ImageOptions(fig,ax,Xlabel,Ylabel,Title,Legend,Crop=False)
@@ -7107,7 +7076,7 @@ def run(argv=None):
 				for j in range(0,len(waveformlocs)):
 					ASCIIWaveforms.append(VoltageWaveforms[j])
 				#endfor
-				DirASCIIPhase = CreateNewFolder(Dirphaseresolved,'1DPhase_Data')
+				DirASCIIPhase = create_new_folder(Dirphaseresolved, '1DPhase_Data')
 				write_data_to_file(ASCIIWaveforms, DirASCIIPhase + 'VoltageWaveforms',
 								   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
 			#endif
@@ -7118,7 +7087,7 @@ def run(argv=None):
 			for i in tqdm(range(0,len(proclist))):
 
 				#Create new folder to keep specific plots.
-				DirMovieplots = CreateNewFolder(Dirphaseresolved,VariableStrings[i]+'_1Dphaseresolved')
+				DirMovieplots = create_new_folder(Dirphaseresolved, VariableStrings[i] + '_1Dphaseresolved')
 
 				#Refresh lineout lists between variables.
 				Lineouts,ProfileOrientation = list(),list()
@@ -7145,7 +7114,7 @@ def run(argv=None):
 					if ProfileOrientation[k] == 'Radial':
 						NameString = VariableStrings[i]+'_'+str(round(Lineouts[k]*dz[l],2))+'cm[Z]'
 					if savefig_phaseresolve1D == True:
-						Dir1DProfiles = CreateNewFolder(DirMovieplots,NameString)
+						Dir1DProfiles = create_new_folder(DirMovieplots, NameString)
 					#endif
 
 					#Collect Normalization data for plotting.
@@ -7219,7 +7188,7 @@ def run(argv=None):
 
 						# Write data underpinning current figure in .csv format
 						if Write_CSV == True:
-							CSVDir = CreateNewFolder(Dir1DProfiles, '1DPhase_Data')
+							CSVDir = create_new_folder(Dir1DProfiles, '1DPhase_Data')
 							CSVRMesh = 'R_Mesh [Cells] '+str(R_mesh[l])+'  :: dR [cm/cell] '+str(dr[l])
 							CSVZMesh = 'Z_Mesh [Cells] '+str(Z_mesh[l])+'  :: dZ [cm/cell] '+str(dz[l])
 							CSVFilename = VariableStrings[i]+'.csv'
@@ -7244,8 +7213,8 @@ def run(argv=None):
 
 						#Write Phase data in ASCII format if required.
 						if write_ASCII == True:
-							DirASCIIPhase = CreateNewFolder(Dirphaseresolved,'1DPhase_Data')
-							DirASCIIPhaseloc = CreateNewFolder(DirASCIIPhase,ProfileString[3:-2])
+							DirASCIIPhase = create_new_folder(Dirphaseresolved, '1DPhase_Data')
+							DirASCIIPhaseloc = create_new_folder(DirASCIIPhase, ProfileString[3:-2])
 							Cycle = str( Phaselist[j].replace(" ", "") )
 							SaveString = DirASCIIPhaseloc+VariableStrings[i]+'_'+Cycle
 							write_data_to_file(phaseresolvedProfile[::-1], SaveString,
@@ -7254,8 +7223,8 @@ def run(argv=None):
 					#endfor
 
 					#Create .mp4 movie from completed images.
-					Prefix = FolderNameTrimmer(Dirlist[l])+'_'+NameString
-					MakeMovie(Dir1DProfiles,Prefix)
+					Prefix = folder_name_trimmer(Dirlist[l]) + '_' + NameString
+					MakeMovie(Dir1DProfiles, Prefix)
 				#endfor
 			#endfor
 		#endfor
@@ -7283,8 +7252,8 @@ def run(argv=None):
 		for l in range(0,numfolders):
 
 			#Create global folder to keep output plots and collect graph title.
-			Dirphaseresolved = CreateNewFolder(Dirlist[l],'Movie1/')
-			VariedValuelist.append( FolderNameTrimmer(Dirlist[l]) )
+			Dirphaseresolved = create_new_folder(Dirlist[l], 'Movie1/')
+			VariedValuelist.append(folder_name_trimmer(Dirlist[l]))
 
 			#Create VariableIndices for each folder as required
 			PhaseData,Phaselist,proclist,VariableStrings = read_TEC2D_phase(l, PhaseVariables, Dir,
@@ -7343,7 +7312,7 @@ def run(argv=None):
 				#endfor
 				#ax.plot(Phaseaxis,ElectrodeBias, 'k--', lw=2)
 
-				Title = 'Phase-Resolved Voltage Waveforms for '+FolderNameTrimmer(Dirlist[l])
+				Title = 'Phase-Resolved Voltage Waveforms for ' + folder_name_trimmer(Dirlist[l])
 				Legend = ['Waveform Vpp: '+str(round(ElectrodeVpp[2],2))+'V']
 				Xlabel,Ylabel = 'Phase [$\omega$t/2$\pi$]','Electrode Potential [V]'
 				ImageOptions(fig,ax,Xlabel,Ylabel,Title,Legend,Crop=False)
@@ -7358,7 +7327,7 @@ def run(argv=None):
 					for j in range(0,len(waveformlocs)):
 						ASCIIWaveforms.append(VoltageWaveforms[j])
 					#endfor
-					DirASCIIPhase = CreateNewFolder(Dirphaseresolved,'2DPhase_Data')
+					DirASCIIPhase = create_new_folder(Dirphaseresolved, '2DPhase_Data')
 					write_data_to_file(ASCIIWaveforms, DirASCIIPhase + 'VoltageWaveforms',
 									   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
 				#endif
@@ -7371,7 +7340,7 @@ def run(argv=None):
 			for i in tqdm(range(0,len(proclist))):
 
 				#Create new folder to keep specific plots.
-				DirMovieplots = CreateNewFolder(Dirphaseresolved,VariableStrings[i]+'_2Dphaseresolved/')
+				DirMovieplots = create_new_folder(Dirphaseresolved, VariableStrings[i] + '_2Dphaseresolved/')
 
 				#Obtain maximum and minimum values of current variable over all phases.
 				MinLim,MaxLim = list(),list()
@@ -7521,7 +7490,7 @@ def run(argv=None):
 
 					# Write data underpinning current figure in .csv format
 					if Write_CSV == True:
-						CSVDir = CreateNewFolder(DirMovieplots, '2DPhase_Data')
+						CSVDir = create_new_folder(DirMovieplots, '2DPhase_Data')
 						CSVRMesh = 'R_Mesh [Cells] '+str(R_mesh[l])+'  :: dR [cm/cell] '+str(dr[l])
 						CSVZMesh = 'Z_Mesh [Cells] '+str(Z_mesh[l])+'  :: dZ [cm/cell] '+str(dz[l])
 						CSVFilename = VariableStrings[i]+'.csv'
@@ -7548,8 +7517,8 @@ def run(argv=None):
 
 					#Write Phase data in ASCII format
 					if write_ASCII == True:
-						DirASCIIPhase = CreateNewFolder(DirMovieplots,'2DPhase_Data')
-						DirASCIIPhaseVar = CreateNewFolder(DirASCIIPhase,VariableStrings[i])
+						DirASCIIPhase = create_new_folder(DirMovieplots, '2DPhase_Data')
+						DirASCIIPhaseVar = create_new_folder(DirASCIIPhase, VariableStrings[i])
 						Cycle = str( Phaselist[j].replace(" ", "") )
 						SaveString = DirASCIIPhaseVar+VariableStrings[i]+'_'+Cycle
 						write_data_to_file(Image, SaveString,
@@ -7560,8 +7529,8 @@ def run(argv=None):
 				#=====#
 
 				#Create .mp4 movie from completed images.
-				Prefix = FolderNameTrimmer(Dirlist[l])
-				MakeMovie(DirMovieplots,Prefix+'_'+VariableStrings[i])
+				Prefix = folder_name_trimmer(Dirlist[l])
+				MakeMovie(DirMovieplots, Prefix + '_' + VariableStrings[i])
 			#endfor
 		#endfor
 
@@ -7591,11 +7560,11 @@ def run(argv=None):
 		for l in tqdm(range(0,numfolders)):
 
 			#Create global folders to keep output plots.
-			TrendVariable = list(filter(lambda x: x.isalpha(), FolderNameTrimmer(Dirlist[0])))	#List of discrete chars
+			TrendVariable = list(filter(lambda x: x.isalpha(), folder_name_trimmer(Dirlist[0])))	#List of discrete chars
 			TrendVariable = ''.join(TrendVariable)												#Single string of chars
-			Dirphaseresolved = CreateNewFolder(Dirlist[l],'2DPhase/')
-			DirTrends = CreateNewFolder(os.getcwd()+'/',TrendVariable+' Trends')
-			DirSheath = CreateNewFolder(DirTrends,'Sheath Trends')
+			Dirphaseresolved = create_new_folder(Dirlist[l], '2DPhase/')
+			DirTrends = create_new_folder(os.getcwd() + '/', TrendVariable + ' Trends')
+			DirSheath = create_new_folder(DirTrends, 'Sheath Trends')
 
 			#Create VariableIndices for each folder as required. (Always get 'E','AR+','PPOT')
 			SxData,SxPhase,Sxproc,Sxvar = read_TEC2D_phase(l, PhaseVariables + ['E', 'AR+', 'PPOT'], Dir,
@@ -7603,7 +7572,7 @@ def run(argv=None):
 														   MinSharedVariables, Globalnumvars,
 														   R_mesh, Z_mesh,
 														   Units, AtomicSpecies)
-			VariedValuelist.append( FolderNameTrimmer(Dirlist[l]) )
+			VariedValuelist.append(folder_name_trimmer(Dirlist[l]))
 
 			#Extract waveforms from desired electrode locations.
 			PPOT = Sxproc[Sxvar.index('PPOT')]
@@ -7712,8 +7681,8 @@ def run(argv=None):
 
 			#Write phase-resolved sheath dynamics to ASCII format datafile if requested.
 			if write_ASCII == True:
-				DirASCII = CreateNewFolder(Dirphaseresolved,'2DPhase_Data')
-				DirASCIISheath = CreateNewFolder(DirASCII,'SheathDynamics')
+				DirASCII = create_new_folder(Dirphaseresolved, '2DPhase_Data')
+				DirASCIISheath = create_new_folder(DirASCII, 'SheathDynamics')
 				write_data_to_file(Phaseaxis + ['\n'] + SxLoc, DirASCIISheath + VariedValuelist[l] + 'SheathDynamics',
 								   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
 			#endif
@@ -7721,8 +7690,8 @@ def run(argv=None):
 
 		#Write sheath trends to ASCII format datafile if requested.
 		if write_ASCII == True:
-			DirASCII = CreateNewFolder(DirTrends,'Trend_Data')
-			DirASCIISheath = CreateNewFolder(DirASCII,'Sheath_Data')
+			DirASCII = create_new_folder(DirTrends, 'Trend_Data')
+			DirASCIISheath = create_new_folder(DirASCII, 'Sheath_Data')
 			write_data_to_file(VariedValuelist + ['\n'] + SxMaxExtTrend, DirASCIISheath + 'MaxExtent_Trends',
 							   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
 			write_data_to_file(VariedValuelist + ['\n'] + SxMeanExtTrend, DirASCIISheath + 'MeanExtent_Trends',
@@ -7807,10 +7776,10 @@ def run(argv=None):
 
 			#Create global folders to keep output plots and collect graph title.
 			VoltageWaveforms,WaveformBiases = list(),list()
-			DirPROES = CreateNewFolder(Dirlist[l],'PROES')
+			DirPROES = create_new_folder(Dirlist[l], 'PROES')
 
 			#Update X-axis with folder information.
-			VariedValuelist.append( FolderNameTrimmer(Dirlist[l]) )
+			VariedValuelist.append(folder_name_trimmer(Dirlist[l]))
 
 			#Create VariableIndices for each folder as required. (Always get 'E','AR+','PPOT')
 			PhaseData,Phaselist,proclist,varlist = read_TEC2D_phase(l, PhaseVariables, Dir,
@@ -7866,7 +7835,7 @@ def run(argv=None):
 			#endfor
 			#ax.plot(Phaseaxis,ElectrodeBias, 'k--', lw=2)
 
-			Title = 'Phase-Resolved Voltage Waveforms for '+FolderNameTrimmer(Dirlist[l])
+			Title = 'Phase-Resolved Voltage Waveforms for ' + folder_name_trimmer(Dirlist[l])
 			Legend = ['Waveform Vpp: '+str(round(ElectrodeVpp[2],2))+'V']
 			Xlabel,Ylabel = 'Phase [$\omega$t/2$\pi$]','Electrode Potential [V]'
 			ImageOptions(fig,ax,Xlabel,Ylabel,Title,Legend,Crop=False)
@@ -7881,7 +7850,7 @@ def run(argv=None):
 				for j in range(0,len(waveformlocs)):
 					ASCIIWaveforms.append(VoltageWaveforms[j])
 				#endfor
-				DirASCIIPROES = CreateNewFolder(DirPROES,'PROES_Data')
+				DirASCIIPROES = create_new_folder(DirPROES, 'PROES_Data')
 				write_data_to_file(ASCIIWaveforms, DirASCIIPROES + 'VoltageWaveforms',
 								   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
 			#endif
@@ -8002,7 +7971,7 @@ def run(argv=None):
 					#endif
 
 					#Create output folder for current profile
-					DirPROESloc = CreateNewFolder(DirPROES,ProfileString[3::])
+					DirPROESloc = create_new_folder(DirPROES, ProfileString[3::])
 
 					#Create PROES image along line of sight with phase-locked waveform.
 					fig.suptitle( 'Simulated '+varlist[i]+' PROES for '+VariedValuelist[l]+ProfileString+'\n DoF = '+str(round(((2*DoFwidth)+1)*dz[l],2))+' cm', y=0.95, fontsize=18)
@@ -8039,8 +8008,8 @@ def run(argv=None):
 
 					#Write PROES data in ASCII format if required.
 					if write_ASCII == True:
-						DirASCIIPROES = CreateNewFolder(DirPROES,'PROES_Data')
-						DirASCIIPROESloc = CreateNewFolder(DirASCIIPROES,ProfileString[3::])
+						DirASCIIPROES = create_new_folder(DirPROES, 'PROES_Data')
+						DirASCIIPROESloc = create_new_folder(DirASCIIPROES, ProfileString[3::])
 						write_data_to_file(PROES, DirASCIIPROESloc + varlist[i] + '_PROES',
 										   R_mesh_i=R_mesh[l], dr_i=dr[l], Z_mesh_i=Z_mesh[l], dz_i=dz[l])
 					#endif
