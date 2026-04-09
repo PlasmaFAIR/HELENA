@@ -1,3 +1,5 @@
+import re
+
 from .utility import string_in_variable
 
 
@@ -436,6 +438,460 @@ def variable_unit_conversion(profile, variable, units="SI", atomic_species=None)
                 profile[i] = profile[i]  # [cm-3]
 
     return profile
+
+
+def variable_label_maker(variable_strings, units, image_logplot, atomic_species):
+    # Makeshift way of creating units for each legend entry.
+
+    # Define common lists for implicit legend generation.
+    power_list = ["POW-ALL", "POW-TOT", "POW-ICP", "POW-RF", "POW-RF-E"]
+    flux_list = ["FZ-", "FR-", "EFLUX-R", "EFLUX-Z"]
+    ionisation_list = ["S-", "SEB-"]
+    velocity_list = ["VZ-", "VR-"]
+
+    # Define Regular Expression lists for numericised ICP coil set variable names
+    reg_ex = re.compile("POWICP.")
+    POWICP_vars = ["POWICP"] + [
+        string for string in variable_strings if re.match(reg_ex, string)
+    ]
+
+    reg_ex = re.compile("ERADIAL.")
+    ERADIAL_vars = ["ERADIAL"] + [
+        string for string in variable_strings if re.match(reg_ex, string)
+    ]
+    reg_ex = re.compile("ETHETA.")
+    ETHETA_vars = ["ETHETA"] + [
+        string for string in variable_strings if re.match(reg_ex, string)
+    ]
+    reg_ex = re.compile("EAXIAL.")
+    EAXIAL_vars = ["EAXIAL"] + [
+        string for string in variable_strings if re.match(reg_ex, string)
+    ]
+
+    reg_ex = re.compile("PHASEER.")
+    PHASEER_vars = ["PHASEER"] + [
+        string for string in variable_strings if re.match(reg_ex, string)
+    ]
+    reg_ex = re.compile("PHASE.")
+    PHASE_vars = ["PHASE"] + [
+        string for string in variable_strings if re.match(reg_ex, string)
+    ]
+    reg_ex = re.compile("PHASEEZ.")
+    PHASEEZ_vars = ["PHASEEZ"] + [
+        string for string in variable_strings if re.match(reg_ex, string)
+    ]
+
+    reg_ex = re.compile("BR.")
+    BR_vars = ["BR"] + [
+        string for string in variable_strings if re.match(reg_ex, string)
+    ]
+    reg_ex = re.compile("BT.")
+    BT_vars = ["BT"] + [
+        string for string in variable_strings if re.match(reg_ex, string)
+    ]
+    reg_ex = re.compile("BZ.")
+    BZ_vars = ["BZ"] + [
+        string for string in variable_strings if re.match(reg_ex, string)
+    ]
+    reg_ex = re.compile("BRF.")
+    BRF_vars = ["BRF"] + [
+        string for string in variable_strings if re.match(reg_ex, string)
+    ]
+
+    reg_ex = re.compile("PHASEBR.")
+    PHASEBR_vars = ["PHASEBR"] + [
+        string for string in variable_strings if re.match(reg_ex, string)
+    ]
+    reg_ex = re.compile("PHASEBT.")
+    PHASEBT_vars = ["PHASEBT"] + [
+        string for string in variable_strings if re.match(reg_ex, string)
+    ]
+    reg_ex = re.compile("PHASEBZ.")
+    PHASEBZ_vars = ["PHASEBZ"] + [
+        string for string in variable_strings if re.match(reg_ex, string)
+    ]
+    reg_ex = re.compile("J-THETA.")
+    JTHETA_vars = ["J-THETA"] + [
+        string for string in variable_strings if re.match(reg_ex, string)
+    ]
+
+    log_string = "Log$_{10}$" if image_logplot else ""
+
+    variable_legends = []
+    for i in range(0, len(variable_strings)):
+        # Explicit Pressure and Species Densities.
+        if variable_strings[i] in ["PRESSURE"]:
+            variable = "Pressure"
+            if units == "SI":
+                variable_unit = log_string + "[Pa]"
+            elif units == "CGS":
+                variable_unit = log_string + "[Torr]"
+        elif variable_strings[i] in ["AR", "AR3S"]:
+            variable = "Neutral Ar Density"
+            if units == "SI":
+                variable_unit = log_string + "[m$^{-3}$]"
+            elif units == "CGS":
+                variable_unit = log_string + "[cm$^{-3}$]"
+        elif variable_strings[i] in ["E"]:
+            variable = "Electron Density n$_{e}$"
+            if units == "SI":
+                variable_unit = log_string + "[m$^{-3}$]"
+            elif units == "CGS":
+                variable_unit = log_string + "[cm$^{-3}$]"
+        elif variable_strings[i] in ["AR+"]:
+            variable = "Ar+ Density"
+            if units == "SI":
+                variable_unit = log_string + "[m$^{-3}$]"
+            elif units == "CGS":
+                variable_unit = log_string + "[cm$^{-3}$]"
+
+        # Explicit Ionization Rates.
+        elif variable_strings[i] == "S-E":
+            variable = "Bulk e$^-$ Source Rate \n"
+            if units == "SI":
+                variable_unit = log_string + "[m$^{-3}$s$^{-1}$]"
+            elif units == "CGS":
+                variable_unit = log_string + "[cm$^{-3}$s$^{-1}$]"
+        elif variable_strings[i] == "SEB-E":
+            variable = "Secondry e$^-$ Source Rate \n"
+            if units == "SI":
+                variable_unit = log_string + "[m$^{-3}$s$^{-1}$]"
+            elif units == "CGS":
+                variable_unit = log_string + "[cm$^{-3}$s$^{-1}$]"
+        elif variable_strings[i] == "EB-ESORC":
+            variable = "Secondry e$^-$ Relaxation Rate \n"
+            if units == "SI":
+                variable_unit = log_string + "[m$^{-3}$s$^{-1}$]"
+            elif units == "CGS":
+                variable_unit = log_string + "[cm$^{-3}$s$^{-1}$]"
+        elif variable_strings[i] == "S-AR+":
+            variable = "Bulk Ar+ Ionization Rate \n"
+            if units == "SI":
+                variable_unit = log_string + "[m$^{-3}$s$^{-1}$]"
+            elif units == "CGS":
+                variable_unit = log_string + "[cm$^{-3}$s$^{-1}$]"
+        elif variable_strings[i] == "SEB-AR+":
+            variable = "Secondry Ar+ Ionization Rate \n"
+            if units == "SI":
+                variable_unit = log_string + "[m$^{-3}$s$^{-1}$]"
+            elif units == "CGS":
+                variable_unit = log_string + "[cm$^{-3}$s$^{-1}$]"
+
+        # Explicit Vibrational States.
+        elif variable_strings[i] == "GSH2V1":
+            variable = "1st Vibrational Excited State \n"
+            variable_unit = log_string + "[cm$^{-3}$]"
+        elif variable_strings[i] == "GSH2V4":
+            variable = "4th Vibrational Excited State \n"
+            variable_unit = log_string + "[cm$^{-3}$]"
+        elif variable_strings[i] == "GSH2V14":
+            variable = "14th Vibrational Excited State \n"
+            variable_unit = log_string + "[cm$^{-3}$]"
+
+        # Explicit Species Temperatures.
+        elif variable_strings[i] == "TE":
+            variable = "Electron Temperature T$_{e}$"
+            variable_unit = log_string + "[eV]"
+        elif variable_strings[i] == "TG-AVE":
+            variable = "Neutral Gas Temperature"
+            variable_unit = log_string + "[K]"
+
+        # Explicit Species Velocities.
+        elif variable_strings[i] == "VZ-NEUTRAL":
+            variable = "Neutral Axial Velocity"
+            if units == "SI":
+                variable_unit = log_string + "[ms$^{-1}$]"
+            elif units == "CGS":
+                variable_unit = log_string + "[cms$^{-1}$]"
+        elif variable_strings[i] == "VR-NEUTRAL":
+            variable = "Neutral Radial Velocity"
+            if units == "SI":
+                variable_unit = log_string + "[ms$^{-1}$]"
+            elif units == "CGS":
+                variable_unit = log_string + "[cms$^{-1}$]"
+        elif variable_strings[i] == "VZ-ION+":
+            variable = "+Ion Axial Velocity"
+            if units == "SI":
+                variable_unit = log_string + "[kms$^{-1}$]"
+            elif units == "CGS":
+                variable_unit = log_string + "[cms$^{-1}$]"
+        elif variable_strings[i] == "VR-ION+":
+            variable = "+Ion Radial Velocity"
+            if units == "SI":
+                variable_unit = log_string + "[kms$^{-1}$]"
+            elif units == "CGS":
+                variable_unit = log_string + "[cms$^{-1}$]"
+        elif variable_strings[i] == "VZ-ION-":
+            variable = "-Ion Axial Velocity"
+            if units == "SI":
+                variable_unit = log_string + "[kms$^{-1}$]"
+            elif units == "CGS":
+                variable_unit = log_string + "[cms$^{-1}$]"
+        elif variable_strings[i] == "VR-ION-":
+            variable = "-Ion Radial Velocity"
+            if units == "SI":
+                variable_unit = log_string + "[kms$^{-1}$]"
+            elif units == "CGS":
+                variable_unit = log_string + "[cms$^{-1}$]"
+
+        # Explicit Species Fluxes.
+        elif variable_strings[i] == "E FLUX-Z":
+            variable = "Electron Axial Flux"
+            if units == "SI":
+                variable_unit = log_string + "[m$^{-2}$s$^{-1}$]"
+            elif units == "CGS":
+                variable_unit = log_string + "[cm$^{-2}$s$^{-1}$]"
+        elif variable_strings[i] == "E FLUX-R":
+            variable = "Electron Radial Flux"
+            if units == "SI":
+                variable_unit = log_string + "[m$^{-2}$s$^{-1}$]"
+            elif units == "CGS":
+                variable_unit = log_string + "[cm$^{-2}$s$^{-1}$]"
+        elif variable_strings[i] == "FZ-AR+":
+            variable = "Ar+ Axial Flux"
+            if units == "SI":
+                variable_unit = log_string + "[m$^{-2}$s$^{-1}$]"
+            elif units == "CGS":
+                variable_unit = log_string + "[cm$^{-2}$s$^{-1}$]"
+        elif variable_strings[i] == "FR-AR+":
+            variable = "Ar+ Radial Flux"
+            if units == "SI":
+                variable_unit = log_string + "[m$^{-2}$s$^{-1}$]"
+            elif units == "CGS":
+                variable_unit = log_string + "[cm$^{-2}$s$^{-1}$]"
+        elif variable_strings[i] == "FZ-AR":
+            variable = "Ar Axial Flux"
+            if units == "SI":
+                variable_unit = log_string + "[m$^{-2}$s$^{-1}$]"
+            elif units == "CGS":
+                variable_unit = log_string + "[cm$^{-2}$s$^{-1}$]"
+        elif variable_strings[i] == "FR-AR":
+            variable = "Ar Radial Flux"
+            if units == "SI":
+                variable_unit = log_string + "[m$^{-2}$s$^{-1}$]"
+            elif units == "CGS":
+                variable_unit = log_string + "[cm$^{-2}$s$^{-1}$]"
+
+        # Explicit Electrodynamic Properties
+        elif variable_strings[i] in ["RHO"]:
+            variable = "Charge Density $\\rho$"
+            if units == "SI":
+                variable_unit = log_string + "[C m$^{-3}$]"
+            elif units == "CGS":
+                variable_unit = log_string + "[C cm$^{-3}$]"
+        elif variable_strings[i] in ["PPOT", "P-POT"]:
+            variable = "Plasma Potential V$_{p}$"
+            variable_unit = log_string + "[V]"
+        elif variable_strings[i] in ["SIGMA"]:
+            variable = "Conductivity $\\sigma$"
+            if units == "SI":
+                variable_unit = log_string + "[S m$^{-1}$]"
+            elif units == "CGS":
+                variable_unit = log_string + "[S cm$^{-1}$]"
+
+        elif variable_strings[i] in ["EF-TOT"]:
+            variable = "Absolute E-Field Amplitude"
+            if units == "SI":
+                variable_unit = log_string + "[Vm$^{-1}$]"
+            elif units == "CGS":
+                variable_unit = log_string + "[Vcm$^{-1}$]"
+        elif variable_strings[i] in ERADIAL_vars + ["ER", "EAMB-R"]:
+            variable = "Radial E-Field Amplitude $E_{R}$"
+            if units == "SI":
+                variable_unit = log_string + "[Vm$^{-1}$]"
+            elif units == "CGS":
+                variable_unit = log_string + "[Vcm$^{-1}$]"
+        elif variable_strings[i] in ETHETA_vars + ["ET", "EAMB-T"]:
+            variable = "Azimuthal E-Field Amplitude $E_{\\theta}$"
+            if units == "SI":
+                variable_unit = log_string + "[Vm$^{-1}$]"
+            elif units == "CGS":
+                variable_unit = log_string + "[Vcm$^{-1}$]"
+        elif variable_strings[i] in EAXIAL_vars + ["EZ", "EAMB-Z"]:
+            variable = "Axial E-Field Amplitude $E_{Z}$"
+            if units == "SI":
+                variable_unit = log_string + "[Vm$^{-1}$]"
+            elif units == "CGS":
+                variable_unit = log_string + "[Vcm$^{-1}$]"
+        elif variable_strings[i] in PHASEER_vars:
+            variable = "Radial E-Field Phase"
+            variable_unit = "[Radians]"
+        elif variable_strings[i] in PHASE_vars:  # RM SJD, CATCHES ALL PHASE VARIABLES
+            variable = "Azimuthal E-Field Phase"
+            variable_unit = "[Radians]"
+        elif variable_strings[i] in PHASEEZ_vars:  # RM SJD, CATCHES ALL PHASE VARIABLES
+            variable = "Axial E-Field Phase"
+            variable_unit = "[Radians]"
+
+        elif variable_strings[i] == "BRS":
+            variable = "Radial Static \n B-field Magnitude $B_{R}$"
+            if units == "SI":
+                variable_unit = log_string + "[G]"
+            elif units == "CGS":
+                variable_unit = log_string + "[G]"
+        elif variable_strings[i] == "BTS":
+            variable = "Azimuthal Static \n B-field Magnitude $B_{\\theta}$"
+            if units == "SI":
+                variable_unit = log_string + "[G]"
+            elif units == "CGS":
+                variable_unit = log_string + "[G]"
+        elif variable_strings[i] == "BZS":
+            variable = "Axial Static \n B-field Magnitude $B_{Z}$"
+            if units == "SI":
+                variable_unit = log_string + "[G]"
+            elif units == "CGS":
+                variable_unit = log_string + "[G]"
+
+        elif variable_strings[i] in BR_vars:
+            variable = "Radial Induced \n B-field Magnitude $B_{R}$"
+            if units == "SI":
+                variable_unit = log_string + "[G]"
+            elif units == "CGS":
+                variable_unit = log_string + "[G]"
+        elif variable_strings[i] in BT_vars + ["BTHETA"]:
+            variable = "Azimuthal Induced \n B-field Magnitude $B_{\\theta}$"
+            if units == "SI":
+                variable_unit = log_string + "[G]"
+            elif units == "CGS":
+                variable_unit = log_string + "[G]"
+        elif variable_strings[i] in BZ_vars:
+            variable = "Axial Induced \n B-field Magnitude $B_{Z}$"
+            if units == "SI":
+                variable_unit = log_string + "[G]"
+            elif units == "CGS":
+                variable_unit = log_string + "[G]"
+        elif variable_strings[i] in BRF_vars:
+            variable = "Induced B-field Magnitude $B_{RF}$"
+            if units == "SI":
+                variable_unit = log_string + "[G]"
+            elif units == "CGS":
+                variable_unit = log_string + "[G]"
+        elif variable_strings[i] in PHASEBR_vars:
+            variable = "Radial Induced B-field Phase"
+            variable_unit = "[Radians]"
+        elif variable_strings[i] in PHASEBT_vars:
+            variable = "Azimuthal Induced B-field Phase"
+            variable_unit = "[Radians]"
+        elif variable_strings[i] in PHASEBZ_vars:
+            variable = "Axial Induced B-field Phase"
+            variable_unit = "[Radians]"
+
+        elif variable_strings[i] in ["JZ-NET"]:
+            variable = "Axial Net Current Density $J_{Z}$"
+            if units == "SI":
+                variable_unit = log_string + "[A m$^{-2}$]"
+            elif units == "CGS":
+                variable_unit = log_string + "[A cm$^{-2}$]"
+        elif variable_strings[i] in ["JR-NET"]:
+            variable = "Radial Net Current Density $J_{R}$"
+            if units == "SI":
+                variable_unit = log_string + "[A m$^{-2}$]"
+            elif units == "CGS":
+                variable_unit = log_string + "[A cm$^{-2}$]"
+        elif variable_strings[i] in JTHETA_vars:
+            variable = "Azimuthal Net Current Density $J_{\\theta}$"
+            if units == "SI":
+                variable_unit = log_string + "[A m$^{-2}$]"
+            elif units == "CGS":
+                variable_unit = log_string + "[A cm$^{-2}$]"
+        elif variable_strings[i] in ["J-TH(MAG)"]:
+            variable = "Azimuthal MCS Electron Current Density $J_{e\\theta}$"
+            if units == "SI":
+                variable_unit = log_string + "[A m$^{-2}$]"
+            elif units == "CGS":
+                variable_unit = log_string + "[A cm$^{-2}$]"
+        elif variable_strings[i] in ["J-TH(PHA)"]:
+            variable = "Azimuthal MCS Electron \n Current Phase $J_{e\\theta}$"
+            variable_unit = "[Radians]"
+
+        # Explicit Power Deposition.
+        elif variable_strings[i] in ["POW-TOT"]:
+            variable = "Total Power Density"
+            if units == "SI":
+                variable_unit = log_string + "[Wm$^{-3}$]"
+            elif units == "CGS":
+                variable_unit = log_string + "[Wcm$^{-3}$]"
+        elif variable_strings[i] in POWICP_vars + [
+            "POW-ICP"
+        ]:  # Note: 	POW-ICP:  total icp power
+            variable = "Inductive Power Density"  # POWICP-n: coilset #n icp power
+            if units == "SI":
+                variable_unit = log_string + "[Wm$^{-3}$]"
+            elif units == "CGS":
+                variable_unit = log_string + "[Wcm$^{-3}$]"
+        elif variable_strings[i] in ["POW-RF"]:
+            variable = "RF Power Density"
+            if units == "SI":
+                variable_unit = log_string + "[Wm$^{-3}$]"
+            elif units == "CGS":
+                variable_unit = log_string + "[Wcm$^{-3}$]"
+        elif variable_strings[i] in ["POW-RF-E"]:
+            variable = "RF Electron Power Density"
+            if units == "SI":
+                variable_unit = log_string + "[Wm$^{-3}$]"
+            elif units == "CGS":
+                variable_unit = log_string + "[Wcm$^{-3}$]"
+
+        # Explicit Collision Rates.
+        elif variable_strings[i] == "COLF":
+            variable = "Electron Collision Frequency"
+            variable_unit = log_string + "[s$^{-1}$]"
+
+        # Implicit Variables.
+        elif string_in_variable(variable_strings[i], ionisation_list):
+            variable = variable_strings[i]
+            if units == "SI":
+                variable_unit = log_string + "[m$^{-3}$s$^{-1}$]"
+            elif units == "CGS":
+                variable_unit = log_string + "[cm$^{-3}$s$^{-1}$]"
+        elif string_in_variable(variable_strings[i], ["SRCE-"]):
+            variable = variable_strings[i]
+            if units == "SI":
+                variable_unit = log_string + "[m$^{-3}$s$^{-1}$]"
+            elif units == "CGS":
+                variable_unit = log_string + "[cm$^{-3}$s$^{-1}$]"
+        elif string_in_variable(variable_strings[i], ["T-"]):
+            variable = variable_strings[i]
+            variable_unit = "[K]"
+        elif string_in_variable(variable_strings[i], velocity_list):
+            variable = variable_strings[i]
+            if units == "SI":
+                variable_unit = log_string + "[kms$^{-1}$]"
+            elif units == "CGS":
+                variable_unit = log_string + "[cms$^{-1}$]"
+        elif string_in_variable(variable_strings[i], flux_list):
+            variable = variable_strings[i]
+            if units == "SI":
+                variable_unit = log_string + "[m$^{-2}$s$^{-1}$]"
+            elif units == "CGS":
+                variable_unit = log_string + "[cm$^{-2}$s$^{-1}$]"
+        elif string_in_variable(variable_strings[i], ["POW-"]):
+            variable = variable_strings[i]
+            if units == "SI":
+                variable_unit = log_string + "[Wm$^{-3}$]"
+            elif units == "CGS":
+                variable_unit = log_string + "[Wcm$^{-3}$]"
+        elif variable_strings[i] in [x.replace("^", "+") for x in atomic_species]:
+            variable = variable_strings[i]
+            if units == "SI":
+                variable_unit = log_string + "[m$^{-3}$]"
+            elif units == "CGS":
+                variable_unit = log_string + "[cm$^{-3}$]"
+        elif variable_strings[i] in atomic_species:
+            variable = variable_strings[i]
+            if units == "SI":
+                variable_unit = log_string + "[m$^{-3}$]"
+            elif units == "CGS":
+                variable_unit = log_string + "[cm$^{-3}$]"
+
+        # Default if no fitting variable found.
+        else:
+            variable = "Variable"
+            variable_unit = log_string + "[Unit]"
+
+        variable_legends.append(variable + " " + variable_unit)
+
+    return variable_legends
 
 
 def azimuthal_phase_conversion(profile, variable):

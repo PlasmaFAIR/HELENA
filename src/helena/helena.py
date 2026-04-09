@@ -25,7 +25,8 @@ from .io import get_directories, write_to_csv, write_data_to_file, read_data_fro
 	folder_name_trimmer, make_movie
 from .initialisation import get_mesh_and_SI
 from .data import extract_raw_data, read_TEC2D, read_TEC2D_phase, read_geometry
-from .variables import enumerate_variables, enumerate_vectors, variable_interpolator, variable_unit_conversion, azimuthal_phase_conversion
+from .variables import enumerate_variables, enumerate_vectors, variable_interpolator, variable_unit_conversion, \
+	azimuthal_phase_conversion, variable_label_maker
 from .utility import string_in_variable, is_radial_variable
 from .external import auto_conv_prof
 
@@ -861,339 +862,6 @@ def run(argv=None):
 	#====================================================================#
 					#UNPACKING AND ORGANIZATION OF DATA#
 	#====================================================================#
-
-	#Makeshift way of creating units for each legend entry.
-	def VariableLabelMaker(VariableStrings):
-
-		#Define common lists for implicit legend generation.
-		Powerlist = ['POW-ALL','POW-TOT','POW-ICP','POW-RF','POW-RF-E']
-		Fluxlist = ['FZ-','FR-','EFLUX-R','EFLUX-Z']
-		Ionisationlist = ['S-','SEB-']
-		Velocitylist = ['VZ-','VR-']
-
-		#Define Regular Expression lists for numericised ICP coil set variable names
-		RegEx = re.compile('POWICP.')
-		POWICPVars = ['POWICP']+[string for string in VariableStrings if re.match(RegEx, string)]
-
-		RegEx = re.compile('ERADIAL.')
-		ERADIALVars = ['ERADIAL']+[string for string in VariableStrings if re.match(RegEx, string)]
-		RegEx = re.compile('ETHETA.')
-		ETHETAVars = ['ETHETA']+[string for string in VariableStrings if re.match(RegEx, string)]
-		RegEx = re.compile('EAXIAL.')
-		EAXIALVars = ['EAXIAL']+[string for string in VariableStrings if re.match(RegEx, string)]
-
-		RegEx = re.compile('PHASEER.')
-		PHASEERVars = ['PHASEER']+[string for string in VariableStrings if re.match(RegEx, string)]
-		RegEx = re.compile('PHASE.')
-		PHASEVars = ['PHASE']+[string for string in VariableStrings if re.match(RegEx, string)]
-		RegEx = re.compile('PHASEEZ.')
-		PHASEEZVars = ['PHASEEZ']+[string for string in VariableStrings if re.match(RegEx, string)]
-
-		RegEx = re.compile('BR.')
-		BRVars = ['BR']+[string for string in VariableStrings if re.match(RegEx, string)]
-		RegEx = re.compile('BT.')
-		BTVars = ['BT']+[string for string in VariableStrings if re.match(RegEx, string)]
-		RegEx = re.compile('BZ.')
-		BZVars = ['BZ']+[string for string in VariableStrings if re.match(RegEx, string)]
-		RegEx = re.compile('BRF.')
-		BRFVars = ['BRF']+[string for string in VariableStrings if re.match(RegEx, string)]
-
-		RegEx = re.compile('PHASEBR.')
-		PHASEBRVars = ['PHASEBR']+[string for string in VariableStrings if re.match(RegEx, string)]
-		RegEx = re.compile('PHASEBT.')
-		PHASEBTVars = ['PHASEBT']+[string for string in VariableStrings if re.match(RegEx, string)]
-		RegEx = re.compile('PHASEBZ.')
-		PHASEBZVars = ['PHASEBZ']+[string for string in VariableStrings if re.match(RegEx, string)]
-		RegEx = re.compile('J-THETA.')
-		JTHETAVars = ['J-THETA']+[string for string in VariableStrings if re.match(RegEx, string)]
-
-		#=====#=====#
-		#=====#=====#
-
-		if image_logplot == True:
-			LogString = 'Log$_{10}$'
-		else:
-			LogString = ''
-		#endif
-
-		Variablelegends = list()
-		for i in range(0,len(VariableStrings)):
-			#Explicit Pressure and Species Densities.
-			if VariableStrings[i] in ['PRESSURE']:
-				Variable = 'Pressure'
-				if Units=='SI': 	VariableUnit = LogString+'[Pa]'
-				elif Units=='CGS': VariableUnit = LogString+'[Torr]'
-			elif VariableStrings[i] in ['AR','AR3S']:
-				Variable = 'Neutral Ar Density'
-				if Units=='SI': 	VariableUnit = LogString+'[m$^{-3}$]'
-				elif Units=='CGS':	VariableUnit = LogString+'[cm$^{-3}$]'
-			elif VariableStrings[i] in ['E']:
-				Variable = 'Electron Density n$_{e}$'
-				if Units=='SI': 	VariableUnit = LogString+'[m$^{-3}$]'
-				elif Units=='CGS':	VariableUnit = LogString+'[cm$^{-3}$]'
-			elif VariableStrings[i] in ['AR+']:
-				Variable = 'Ar+ Density'
-				if Units=='SI': 	VariableUnit = LogString+'[m$^{-3}$]'
-				elif Units=='CGS':	VariableUnit = LogString+'[cm$^{-3}$]'
-
-			#Explicit Ionization Rates.
-			elif VariableStrings[i] == 'S-E':
-				Variable = 'Bulk e$^-$ Source Rate \n'
-				if Units=='SI': 	VariableUnit = LogString+'[m$^{-3}$s$^{-1}$]'
-				elif Units=='CGS':	VariableUnit = LogString+'[cm$^{-3}$s$^{-1}$]'
-			elif VariableStrings[i] == 'SEB-E':
-				Variable = 'Secondry e$^-$ Source Rate \n'
-				if Units=='SI': 	VariableUnit = LogString+'[m$^{-3}$s$^{-1}$]'
-				elif Units=='CGS':	VariableUnit = LogString+'[cm$^{-3}$s$^{-1}$]'
-			elif VariableStrings[i] == 'EB-ESORC':
-				Variable = 'Secondry e$^-$ Relaxation Rate \n'
-				if Units=='SI': 	VariableUnit = LogString+'[m$^{-3}$s$^{-1}$]'
-				elif Units=='CGS':	VariableUnit = LogString+'[cm$^{-3}$s$^{-1}$]'
-			elif VariableStrings[i] == 'S-AR+':
-				Variable = 'Bulk Ar+ Ionization Rate \n'
-				if Units=='SI': 	VariableUnit = LogString+'[m$^{-3}$s$^{-1}$]'
-				elif Units=='CGS':	VariableUnit = LogString+'[cm$^{-3}$s$^{-1}$]'
-			elif VariableStrings[i] == 'SEB-AR+':
-				Variable = 'Secondry Ar+ Ionization Rate \n'
-				if Units=='SI': 	VariableUnit = LogString+'[m$^{-3}$s$^{-1}$]'
-				elif Units=='CGS':	VariableUnit = LogString+'[cm$^{-3}$s$^{-1}$]'
-
-			#Explicit Vibrational States.
-			elif VariableStrings[i] == 'GSH2V1':
-				Variable = '1st Vibrational Excited State \n'
-				VariableUnit = LogString+'[cm$^{-3}$]'
-			elif VariableStrings[i] == 'GSH2V4':
-				Variable = '4th Vibrational Excited State \n'
-				VariableUnit = LogString+'[cm$^{-3}$]'
-			elif VariableStrings[i] == 'GSH2V14':
-				Variable = '14th Vibrational Excited State \n'
-				VariableUnit = LogString+'[cm$^{-3}$]'
-
-			#Explicit Species Temperatures.
-			elif VariableStrings[i] == 'TE':
-				Variable = 'Electron Temperature T$_{e}$'
-				VariableUnit = LogString+'[eV]'
-			elif VariableStrings[i] == 'TG-AVE':
-				Variable = 'Neutral Gas Temperature'
-				VariableUnit = LogString+'[K]'
-
-			#Explicit Species Velocities.
-			elif VariableStrings[i] == 'VZ-NEUTRAL':
-				Variable = 'Neutral Axial Velocity'
-				if Units=='SI': 	VariableUnit = LogString+'[ms$^{-1}$]'
-				elif Units=='CGS':	VariableUnit = LogString+'[cms$^{-1}$]'
-			elif VariableStrings[i] == 'VR-NEUTRAL':
-				Variable = 'Neutral Radial Velocity'
-				if Units=='SI': 	VariableUnit = LogString+'[ms$^{-1}$]'
-				elif Units=='CGS':	VariableUnit = LogString+'[cms$^{-1}$]'
-			elif VariableStrings[i] == 'VZ-ION+':
-				Variable = '+Ion Axial Velocity'
-				if Units=='SI': 	VariableUnit = LogString+'[kms$^{-1}$]'
-				elif Units=='CGS':	VariableUnit = LogString+'[cms$^{-1}$]'
-			elif VariableStrings[i] == 'VR-ION+':
-				Variable = '+Ion Radial Velocity'
-				if Units=='SI': 	VariableUnit = LogString+'[kms$^{-1}$]'
-				elif Units=='CGS':	VariableUnit = LogString+'[cms$^{-1}$]'
-			elif VariableStrings[i] == 'VZ-ION-':
-				Variable = '-Ion Axial Velocity'
-				if Units=='SI': 	VariableUnit = LogString+'[kms$^{-1}$]'
-				elif Units=='CGS':	VariableUnit = LogString+'[cms$^{-1}$]'
-			elif VariableStrings[i] == 'VR-ION-':
-				Variable = '-Ion Radial Velocity'
-				if Units=='SI': 	VariableUnit = LogString+'[kms$^{-1}$]'
-				elif Units=='CGS':	VariableUnit = LogString+'[cms$^{-1}$]'
-
-			#Explicit Species Fluxes.
-			elif VariableStrings[i] == 'E FLUX-Z':
-				Variable = 'Electron Axial Flux'
-				if Units=='SI': 	VariableUnit = LogString+'[m$^{-2}$s$^{-1}$]'
-				elif Units=='CGS':	VariableUnit = LogString+'[cm$^{-2}$s$^{-1}$]'
-			elif VariableStrings[i] == 'E FLUX-R':
-				Variable = 'Electron Radial Flux'
-				if Units=='SI': 	VariableUnit = LogString+'[m$^{-2}$s$^{-1}$]'
-				elif Units=='CGS':	VariableUnit = LogString+'[cm$^{-2}$s$^{-1}$]'
-			elif VariableStrings[i] == 'FZ-AR+':
-				Variable = 'Ar+ Axial Flux'
-				if Units=='SI': 	VariableUnit = LogString+'[m$^{-2}$s$^{-1}$]'
-				elif Units=='CGS':	VariableUnit = LogString+'[cm$^{-2}$s$^{-1}$]'
-			elif VariableStrings[i] == 'FR-AR+':
-				Variable = 'Ar+ Radial Flux'
-				if Units=='SI': 	VariableUnit = LogString+'[m$^{-2}$s$^{-1}$]'
-				elif Units=='CGS':	VariableUnit = LogString+'[cm$^{-2}$s$^{-1}$]'
-			elif VariableStrings[i] == 'FZ-AR':
-				Variable = 'Ar Axial Flux'
-				if Units=='SI': 	VariableUnit = LogString+'[m$^{-2}$s$^{-1}$]'
-				elif Units=='CGS':	VariableUnit = LogString+'[cm$^{-2}$s$^{-1}$]'
-			elif VariableStrings[i] == 'FR-AR':
-				Variable = 'Ar Radial Flux'
-				if Units=='SI': 	VariableUnit = LogString+'[m$^{-2}$s$^{-1}$]'
-				elif Units=='CGS':	VariableUnit = LogString+'[cm$^{-2}$s$^{-1}$]'
-
-			#Explicit Electrodynamic Properties
-			elif VariableStrings[i] in ['RHO']:
-				Variable = 'Charge Density $\\rho$'
-				if Units=='SI': 	VariableUnit = LogString+'[C m$^{-3}$]'
-				elif Units=='CGS':	VariableUnit = LogString+'[C cm$^{-3}$]'
-			elif VariableStrings[i] in ['PPOT','P-POT']:
-				Variable = 'Plasma Potential V$_{p}$'
-				VariableUnit = LogString+'[V]'
-			elif VariableStrings[i] in ['SIGMA']:
-				Variable = 'Conductivity $\\sigma$'
-				if Units=='SI': 	VariableUnit = LogString+'[S m$^{-1}$]'
-				elif Units=='CGS':	VariableUnit = LogString+'[S cm$^{-1}$]'
-
-			elif VariableStrings[i] in ['EF-TOT']:
-				Variable = 'Absolute E-Field Amplitude'
-				if Units=='SI': 	VariableUnit = LogString+'[Vm$^{-1}$]'
-				elif Units=='CGS':	VariableUnit = LogString+'[Vcm$^{-1}$]'
-			elif VariableStrings[i] in ERADIALVars+['ER','EAMB-R']:
-				Variable = 'Radial E-Field Amplitude $E_{R}$'
-				if Units=='SI': 	VariableUnit = LogString+'[Vm$^{-1}$]'
-				elif Units=='CGS':	VariableUnit = LogString+'[Vcm$^{-1}$]'
-			elif VariableStrings[i] in ETHETAVars+['ET','EAMB-T']:
-				Variable = 'Azimuthal E-Field Amplitude $E_{\\theta}$'
-				if Units=='SI': 	VariableUnit = LogString+'[Vm$^{-1}$]'
-				elif Units=='CGS':	VariableUnit = LogString+'[Vcm$^{-1}$]'
-			elif VariableStrings[i] in EAXIALVars+['EZ','EAMB-Z']:
-				Variable = 'Axial E-Field Amplitude $E_{Z}$'
-				if Units=='SI': 	VariableUnit = LogString+'[Vm$^{-1}$]'
-				elif Units=='CGS':	VariableUnit = LogString+'[Vcm$^{-1}$]'
-			elif VariableStrings[i] in PHASEERVars:
-				Variable = 'Radial E-Field Phase'
-				VariableUnit = '[Radians]'
-			elif VariableStrings[i] in PHASEVars:							# RM SJD, CATCHES ALL PHASE VARIABLES
-				Variable = 'Azimuthal E-Field Phase'
-				VariableUnit = '[Radians]'
-			elif VariableStrings[i] in PHASEEZVars:							# RM SJD, CATCHES ALL PHASE VARIABLES
-				Variable = 'Axial E-Field Phase'
-				VariableUnit = '[Radians]'
-
-			elif VariableStrings[i] == 'BRS':
-				Variable = 'Radial Static \n B-field Magnitude $B_{R}$'
-				if Units=='SI': 	VariableUnit = LogString+'[G]'
-				elif Units=='CGS':	VariableUnit = LogString+'[G]'
-			elif VariableStrings[i] == 'BTS':
-				Variable = 'Azimuthal Static \n B-field Magnitude $B_{\\theta}$'
-				if Units=='SI': 	VariableUnit = LogString+'[G]'
-				elif Units=='CGS':	VariableUnit = LogString+'[G]'
-			elif VariableStrings[i] == 'BZS':
-				Variable = 'Axial Static \n B-field Magnitude $B_{Z}$'
-				if Units=='SI': 	VariableUnit = LogString+'[G]'
-				elif Units=='CGS':	VariableUnit = LogString+'[G]'
-
-			elif VariableStrings[i] in BRVars:
-				Variable = 'Radial Induced \n B-field Magnitude $B_{R}$'
-				if Units=='SI': 	VariableUnit = LogString+'[G]'
-				elif Units=='CGS':	VariableUnit = LogString+'[G]'
-			elif VariableStrings[i] in BTVars+['BTHETA']:
-				Variable = 'Azimuthal Induced \n B-field Magnitude $B_{\\theta}$'
-				if Units=='SI': 	VariableUnit = LogString+'[G]'
-				elif Units=='CGS':	VariableUnit = LogString+'[G]'
-			elif VariableStrings[i] in BZVars:
-				Variable = 'Axial Induced \n B-field Magnitude $B_{Z}$'
-				if Units=='SI': 	VariableUnit = LogString+'[G]'
-				elif Units=='CGS':	VariableUnit = LogString+'[G]'
-			elif VariableStrings[i] in BRFVars:
-				Variable = 'Induced B-field Magnitude $B_{RF}$'
-				if Units=='SI': 	VariableUnit = LogString+'[G]'
-				elif Units=='CGS':	VariableUnit = LogString+'[G]'
-			elif VariableStrings[i] in PHASEBRVars:
-				Variable = 'Radial Induced B-field Phase'
-				VariableUnit = '[Radians]'
-			elif VariableStrings[i] in PHASEBTVars:
-				Variable = 'Azimuthal Induced B-field Phase'
-				VariableUnit = '[Radians]'
-			elif VariableStrings[i] in PHASEBZVars:
-				Variable = 'Axial Induced B-field Phase'
-				VariableUnit = '[Radians]'
-
-			elif VariableStrings[i] in ['JZ-NET']:
-				Variable = 'Axial Net Current Density $J_{Z}$'
-				if Units=='SI': 	VariableUnit = LogString+'[A m$^{-2}$]'
-				elif Units=='CGS':	VariableUnit = LogString+'[A cm$^{-2}$]'
-			elif VariableStrings[i] in ['JR-NET']:
-				Variable = 'Radial Net Current Density $J_{R}$'
-				if Units=='SI': 	VariableUnit = LogString+'[A m$^{-2}$]'
-				elif Units=='CGS':	VariableUnit = LogString+'[A cm$^{-2}$]'
-			elif VariableStrings[i] in JTHETAVars:
-				Variable = 'Azimuthal Net Current Density $J_{\\theta}$'
-				if Units=='SI': 	VariableUnit = LogString+'[A m$^{-2}$]'
-				elif Units=='CGS':	VariableUnit = LogString+'[A cm$^{-2}$]'
-			elif VariableStrings[i] in ['J-TH(MAG)']:
-				Variable = 'Azimuthal MCS Electron Current Density $J_{e\\theta}$'
-				if Units=='SI': 	VariableUnit = LogString+'[A m$^{-2}$]'
-				elif Units=='CGS':	VariableUnit = LogString+'[A cm$^{-2}$]'
-			elif VariableStrings[i] in ['J-TH(PHA)']:
-				Variable = 'Azimuthal MCS Electron \n Current Phase $J_{e\\theta}$'
-				VariableUnit = '[Radians]'
-
-			#Explicit Power Deposition.
-			elif VariableStrings[i] in ['POW-TOT']:
-				Variable = 'Total Power Density'
-				if Units=='SI': 	VariableUnit = LogString+'[Wm$^{-3}$]'
-				elif Units=='CGS':	VariableUnit = LogString+'[Wcm$^{-3}$]'
-			elif VariableStrings[i] in POWICPVars+['POW-ICP']:			#Note: 	POW-ICP:  total icp power
-				Variable = 'Inductive Power Density'					#		POWICP-n: coilset #n icp power
-				if Units=='SI': 	VariableUnit = LogString+'[Wm$^{-3}$]'
-				elif Units=='CGS':	VariableUnit = LogString+'[Wcm$^{-3}$]'
-			elif VariableStrings[i] in ['POW-RF']:
-				Variable = 'RF Power Density'
-				if Units=='SI': 	VariableUnit = LogString+'[Wm$^{-3}$]'
-				elif Units=='CGS':	VariableUnit = LogString+'[Wcm$^{-3}$]'
-			elif VariableStrings[i] in ['POW-RF-E']:
-				Variable = 'RF Electron Power Density'
-				if Units=='SI': 	VariableUnit = LogString+'[Wm$^{-3}$]'
-				elif Units=='CGS':	VariableUnit = LogString+'[Wcm$^{-3}$]'
-
-			#Explicit Collision Rates.
-			elif VariableStrings[i] == 'COLF':
-				Variable = 'Electron Collision Frequency'
-				VariableUnit = LogString+'[s$^{-1}$]'
-
-			#Implicit Variables.
-			elif string_in_variable(VariableStrings[i], Ionisationlist) == True:
-				Variable = VariableStrings[i]
-				if Units=='SI': 	VariableUnit = LogString+'[m$^{-3}$s$^{-1}$]'
-				elif Units=='CGS':	VariableUnit = LogString+'[cm$^{-3}$s$^{-1}$]'
-			elif string_in_variable(VariableStrings[i], ['SRCE-']) == True:
-				Variable = VariableStrings[i]
-				if Units=='SI': 	VariableUnit = LogString+'[m$^{-3}$s$^{-1}$]'
-				elif Units=='CGS':	VariableUnit = LogString+'[cm$^{-3}$s$^{-1}$]'
-			elif string_in_variable(VariableStrings[i], ['T-']) == True:
-				Variable = VariableStrings[i]
-				VariableUnit = '[K]'
-			elif string_in_variable(VariableStrings[i], Velocitylist) == True:
-				Variable = VariableStrings[i]
-				if Units=='SI': 	VariableUnit = LogString+'[kms$^{-1}$]'
-				elif Units=='CGS':	VariableUnit = LogString+'[cms$^{-1}$]'
-			elif string_in_variable(VariableStrings[i], Fluxlist) == True:
-				Variable = VariableStrings[i]
-				if Units=='SI': 	VariableUnit = LogString+'[m$^{-2}$s$^{-1}$]'
-				elif Units=='CGS':	VariableUnit = LogString+'[cm$^{-2}$s$^{-1}$]'
-			elif string_in_variable(VariableStrings[i], ['POW-']) == True:
-				Variable = VariableStrings[i]
-				if Units=='SI': 	VariableUnit = LogString+'[Wm$^{-3}$]'
-				elif Units=='CGS':	VariableUnit = LogString+'[Wcm$^{-3}$]'
-			elif VariableStrings[i] in [x.replace('^', '+') for x in AtomicSpecies]:
-				Variable = VariableStrings[i]
-				if Units=='SI': 	VariableUnit = LogString+'[m$^{-3}$]'
-				elif Units=='CGS':	VariableUnit = LogString+'[cm$^{-3}$]'
-			elif VariableStrings[i] in AtomicSpecies:
-				Variable = VariableStrings[i]
-				if Units=='SI': 	VariableUnit = LogString+'[m$^{-3}$]'
-				elif Units=='CGS':	VariableUnit = LogString+'[cm$^{-3}$]'
-
-			#Default if no fitting variable found.
-			else:
-				Variable = 'Variable'
-				VariableUnit = LogString+'[Unit]'
-			#endif
-			Variablelegends.append(Variable+' '+VariableUnit)
-		#endfor
-		return Variablelegends
-	#enddef
-
-	#=============#
 
 	def PlotGeometry(ax,MeshCoordinates,MeshConnections,image_plotsymmetry,LabelNodes=False):
 	#	Plots mesh geometry onto a 2D plot
@@ -3452,7 +3120,7 @@ def run(argv=None):
 
 			#Display Min/Max value trends to terminal if requested.
 			if print_generaltrends == True:
-				VariableName = VariableLabelMaker(VariableStrings)[p]
+				VariableName = variable_label_maker(VariableStrings, Units, image_logplot, AtomicSpecies)[p]
 				print(folder_name_trimmer(Dirlist[l]))
 				print( VariableName+' '+Orientation+'Maximum: ', round(max(MaxValueTrend), 5))
 				print( VariableName+' '+Orientation+'Minimum: ', round(min(MinValueTrend), 5))
@@ -4203,7 +3871,7 @@ def run(argv=None):
 				#endif
 
 				# Add Colourbar (must happen before image cropping!)
-				cbarlabel = VariableLabelMaker(VariableStrings)
+				cbarlabel = variable_label_maker(VariableStrings, Units, image_logplot, AtomicSpecies)
 				cax = Colourbar(ax,cbarlabel[i],image_cbarbins,Lim=CbarMinMax(ax,Image))
 
 				# Crop image dimensions to [image_radialcrop,image_axialcrop]
@@ -4347,7 +4015,7 @@ def run(argv=None):
 					#endif
 
 					# Add Colourbar (must happen before image cropping!)
-					cbarlabel = VariableLabelMaker(VariableStrings)
+					cbarlabel = variable_label_maker(VariableStrings, Units, image_logplot, AtomicSpecies)
 					cax = Colourbar(ax,cbarlabel[i],image_cbarbins,Lim=CbarMinMax(ax,Image))
 
 					# Crop image dimensions to [image_radialcrop,image_axialcrop]
@@ -4568,7 +4236,7 @@ def run(argv=None):
 
 					#Apply image options and axis labels.
 					Title = 'Radial Profiles for '+VariableStrings[i]+' for \n'+Dirlist[l][2:-1]
-					Xlabel,Ylabel = 'Radial Distance R [cm]',VariableLabelMaker(VariableStrings)[i]
+					Xlabel,Ylabel = 'Radial Distance R [cm]',variable_label_maker(VariableStrings, Units, image_logplot, AtomicSpecies)[i]
 					ImageOptions(fig,ax,Xlabel,Ylabel,Title,Legendlist,Crop=False)
 
 					#Save profiles in previously created folder.
@@ -4640,7 +4308,7 @@ def run(argv=None):
 
 					#Apply image options and axis labels.
 					Title = 'Height Profiles for '+VariableStrings[i]+' for \n'+Dirlist[l][2:-1]
-					Xlabel,Ylabel = 'Axial Distance Z [cm]',VariableLabelMaker(VariableStrings)[i]
+					Xlabel,Ylabel = 'Axial Distance Z [cm]',variable_label_maker(VariableStrings, Units, image_logplot, AtomicSpecies)[i]
 					ImageOptions(fig,ax,Xlabel,Ylabel,Title,Legendlist,Crop=False)
 
 					#Save profiles in previously created folder.
@@ -4719,7 +4387,7 @@ def run(argv=None):
 
 					#Update legend with folder information.
 					Legendlist.append(folder_name_trimmer(Dirlist[l]))
-					Ylabels = VariableLabelMaker(VariableStrings)
+					Ylabels = variable_label_maker(VariableStrings, Units, image_logplot, AtomicSpecies)
 
 					#Plot all radial profiles for all variables in one folder.
 					RProfile = ExtractRadialProfile(Data[l],VariableIndices[k],VariableStrings[k], radialprofiles[j],R_mesh[l],ISYMlist[l])
@@ -4784,7 +4452,7 @@ def run(argv=None):
 
 					#Update legend with folder information.
 					Legendlist.append(folder_name_trimmer(Dirlist[l]))
-					Ylabels = VariableLabelMaker(VariableStrings)
+					Ylabels = variable_label_maker(VariableStrings, Units, image_logplot, AtomicSpecies)
 
 					#Obtain axial profile for each folder of the current variable.
 					ZProfile = ExtractAxialProfile(Data[l],VariableIndices[k],VariableStrings[k], axialprofiles[j],R_mesh[l],Z_mesh[l],ISYMlist[l])
@@ -4840,8 +4508,8 @@ def run(argv=None):
 			multiVariableIndices,multiVariableStrings = enumerate_variables(multivar, Header_TEC2D[l])
 
 			#Create variable labels with SI unit conversions if required.
-			Ylabel = VariableLabelMaker(VariableStrings)
-			multiYlabel = VariableLabelMaker(multiVariableStrings)
+			Ylabel = variable_label_maker(VariableStrings, Units, image_logplot, AtomicSpecies)
+			multiYlabel = variable_label_maker(multiVariableStrings, Units, image_logplot, AtomicSpecies)
 
 			#Generate the vertical (height) lineouts for a given radius.
 			if len(axialprofiles) > 0:
@@ -4863,7 +4531,7 @@ def run(argv=None):
 
 						#Create legendlist
 						Legendlist = list()
-						Legendlist.append(VariableLabelMaker(VariableStrings)[i])
+						Legendlist.append(variable_label_maker(VariableStrings, Units, image_logplot, AtomicSpecies)[i])
 
 						#Plot the initial variable in VariableIndices first.
 						ZProfile = ExtractAxialProfile(Data[l],VariableIndices[i],VariableStrings[i], axialprofiles[j],R_mesh[l],Z_mesh[l],ISYMlist[l])
@@ -4876,12 +4544,12 @@ def run(argv=None):
 							ImagePlotter1D(Zaxis,ZProfile[::-1],image_aspectratio,fig,ax)
 
 							#Update legendlist with each variable compared.
-							Legendlist.append(VariableLabelMaker(multiVariableStrings)[m])
+							Legendlist.append(variable_label_maker(multiVariableStrings, Units, image_logplot, AtomicSpecies)[m])
 						#endfor
 
 						#Apply image options and axis labels.
 						Title = str(round((axialprofiles[j])*dr[l], 2))+'cm Height profiles for '+VariableStrings[i]+','' for \n'+Dirlist[l][2:-1]
-						Xlabel,Ylabel = 'Axial Distance Z [cm]',VariableLabelMaker(VariableStrings)[i]
+						Xlabel,Ylabel = 'Axial Distance Z [cm]',variable_label_maker(VariableStrings, Units, image_logplot, AtomicSpecies)[i]
 						ImageOptions(fig,ax,Xlabel,Ylabel,Title,Legendlist,Crop=False)
 
 						#Save figures in original folder.
@@ -4916,7 +4584,7 @@ def run(argv=None):
 
 						#Create legendlist
 						Legendlist = list()
-						Legendlist.append(VariableLabelMaker(VariableStrings)[i])
+						Legendlist.append(variable_label_maker(VariableStrings, Units, image_logplot, AtomicSpecies)[i])
 
 						#Plot profile for initial variable in VariableIndices.
 						RProfile = ExtractRadialProfile(Data[l],VariableIndices[i],VariableStrings[i], radialprofiles[j],R_mesh[l],ISYMlist[l])
@@ -4929,13 +4597,13 @@ def run(argv=None):
 							ImagePlotter1D(Raxis,RProfile,image_aspectratio,fig,ax)
 
 							#Update legendlist with each variable compared.
-							Legendlist.append(VariableLabelMaker(multiVariableStrings)[m])
+							Legendlist.append(variable_label_maker(multiVariableStrings, Units, image_logplot, AtomicSpecies)[m])
 						#endfor
 
 
 						#Apply image options and axis labels.
 						Title = str(round((radialprofiles[j])*dz[l], 2))+'cm Radial Profiles for '+VariableStrings[i]+' for \n'+Dirlist[l][2:-1]
-						Xlabel,Ylabel = 'Radial Distance R [cm]',VariableLabelMaker(VariableStrings)[i]
+						Xlabel,Ylabel = 'Radial Distance R [cm]',variable_label_maker(VariableStrings, Units, image_logplot, AtomicSpecies)[i]
 						ImageOptions(fig,ax,Xlabel,Ylabel,Title,Legendlist,Crop=False)
 
 						#Save lines in previously created folder.
@@ -5015,7 +4683,7 @@ def run(argv=None):
 
 							#Apply image options and axis labels.
 							Title = 'Radial Profiles of '+VariableStrings[i]+' for \n'+Dirlist[l][2:-1]
-							Xlabel,Ylabel = 'Radial Distance R [cm]',VariableLabelMaker(VariableStrings)[i]
+							Xlabel,Ylabel = 'Radial Distance R [cm]',variable_label_maker(VariableStrings, Units, image_logplot, AtomicSpecies)[i]
 							ImageOptions(fig,ax,Xlabel,Ylabel,Title,[str(MovieIterlist[l][k])],Crop=False)
 
 							#Save profiles in variable and profile location named folder
@@ -5045,7 +4713,7 @@ def run(argv=None):
 
 						#Apply image options and axis labels.
 						Title = 'Radial Profiles of '+VariableStrings[i]+' for \n'+Dirlist[l][2:-1]
-						Xlabel,Ylabel = 'Radial Distance R [cm]',VariableLabelMaker(VariableStrings)[i]
+						Xlabel,Ylabel = 'Radial Distance R [cm]',variable_label_maker(VariableStrings, Units, image_logplot, AtomicSpecies)[i]
 						ImageOptions(fig,ax,Xlabel,Ylabel,Title,[],Crop=False)
 
 						#Save profiles Radial_Profiles folder.
@@ -5090,7 +4758,7 @@ def run(argv=None):
 
 							#Apply image options and axis labels.
 							Title = 'Height Profiles of '+VariableStrings[i]+' for \n'+Dirlist[l][2:-1]
-							Xlabel,Ylabel = 'Axial Distance Z [cm]',VariableLabelMaker(VariableStrings)[i]
+							Xlabel,Ylabel = 'Axial Distance Z [cm]',variable_label_maker(VariableStrings, Units, image_logplot, AtomicSpecies)[i]
 							ImageOptions(fig,ax,Xlabel,Ylabel,Title,[str(MovieIterlist[l][k])],Crop=False)
 
 							#Save profiles in variable and profile location named folder
@@ -5120,7 +4788,7 @@ def run(argv=None):
 
 						#Apply image options and axis labels.
 						Title = 'Height Profiles for '+VariableStrings[i]+' for \n'+Dirlist[l][2:-1]
-						Xlabel,Ylabel = 'Axial Distance Z [cm]',VariableLabelMaker(VariableStrings)[i]
+						Xlabel,Ylabel = 'Axial Distance Z [cm]',variable_label_maker(VariableStrings, Units, image_logplot, AtomicSpecies)[i]
 						ImageOptions(fig,ax,Xlabel,Ylabel,Title,[],Crop=False)
 
 						#Save profiles Axial_Profiles folder.
@@ -5188,7 +4856,7 @@ def run(argv=None):
 				# Image plotting details.
 				Title = 'Mesh-Averaged Temporal Profile of '+str(VariableStrings[i])+' for \n'+Dirlist[l][2:-1]
 				Xlabel = 'Simulation time [ms]'
-				Ylabel =VariableLabelMaker(VariableStrings)[i]
+				Ylabel =variable_label_maker(VariableStrings, Units, image_logplot, AtomicSpecies)[i]
 				ImageOptions(fig,ax,Xlabel,Ylabel,Title,Legend=[],Crop=False)
 
 				#=====##=====# Image I/O #=====##=====#
@@ -5235,7 +4903,7 @@ def run(argv=None):
 			#=====##=====# Multi-Variable Figure #=====##=====#
 
 			# Plot mesh averaged value over 'real-time' in simulation.
-			Legend = VariableLabelMaker(VariableStrings)
+			Legend = variable_label_maker(VariableStrings, Units, image_logplot, AtomicSpecies)
 			fig, ax = plt.subplots(1, figsize=(14,10))
 
 			# Plot each variable in ConvergenceTrends to single figure.
@@ -5331,7 +4999,7 @@ def run(argv=None):
 			if Continue == True:
 
 				#Plot a convergence check for all variables in each folder.
-				Legend = VariableLabelMaker(VariableStrings)
+				Legend = variable_label_maker(VariableStrings, Units, image_logplot, AtomicSpecies)
 				fig, ax = plt.subplots(1, figsize=(14,10))
 
 				#Normalise and plot each variable in ConvergenceTrends to single figure.
@@ -5894,7 +5562,7 @@ def run(argv=None):
 			VariableIndices,VariableStrings = variable_interpolator(VariableIndices, VariableStrings, MinSharedVariables, Globalnumvars)
 
 			#Create Y-axis legend for each variable to be plotted.
-			YaxisLegend = VariableLabelMaker(VariableStrings)
+			YaxisLegend = variable_label_maker(VariableStrings, Units, image_logplot, AtomicSpecies)
 
 			#Loop escape if variables that do not exist have been requested.
 			if k >= 1 and k > len(VariableStrings)-1:
@@ -7045,7 +6713,7 @@ def run(argv=None):
 							fix,ax = figure(image_aspectratio,1)
 							ax0 = ax							# Image Sub-Fig (top fig)
 						#endif
-						Ylabel = VariableLabelMaker(VariableStrings)
+						Ylabel = variable_label_maker(VariableStrings, Units, image_logplot, AtomicSpecies)
 						fig.suptitle('Phase-Resolved '+VariableStrings[i]+' for '+VariedValuelist[l]+ProfileString+str(Phaselist[j]), y=0.97, fontsize=16)
 
 						#Plot profile and apply image options.
@@ -7350,7 +7018,7 @@ def run(argv=None):
 					#endif
 
 					# Add Colourbar (must happen before image cropping!)
-					Cbarlabel = VariableLabelMaker(VariableStrings)
+					Cbarlabel = variable_label_maker(VariableStrings, Units, image_logplot, AtomicSpecies)
 					cax = Colourbar(ax0,Cbarlabel[i],image_cbarbins,Lim=CbarLimits)
 
 					# Crop image dimensions to [image_radialcrop,image_axialcrop]
@@ -7874,7 +7542,7 @@ def run(argv=None):
 					ax[0].set_xlim(x1,x2)
 					ax[0].set_ylim(y1,y2)
 					#Add Colourbar
-					cbarlabel = VariableLabelMaker(varlist)
+					cbarlabel = variable_label_maker(varlist, Units, image_logplot, AtomicSpecies)
 					Colourbar(ax[0],cbarlabel[i],image_cbarbins,Lim=CbarMinMax(ax,Image=PROES,PROES=ProfileOrientation[k]))
 
 					#Plot Voltage Waveform.
