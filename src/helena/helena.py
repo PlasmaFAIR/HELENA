@@ -29,6 +29,7 @@ from .variables import enumerate_variables, enumerate_vectors, variable_interpol
 	azimuthal_phase_conversion, variable_label_maker
 from .utility import string_in_variable, is_radial_variable
 from .external import auto_conv_prof
+from .plotting import plot_geometry
 
 def run(argv=None):
 	from optparse import OptionParser
@@ -862,101 +863,6 @@ def run(argv=None):
 	#====================================================================#
 					#UNPACKING AND ORGANIZATION OF DATA#
 	#====================================================================#
-
-	def PlotGeometry(ax,MeshCoordinates,MeshConnections,image_plotsymmetry,LabelNodes=False):
-	#	Plots mesh geometry onto a 2D plot
-	#	MeshCoordinates: 2D array of [[radius,height],[radius,height],...]		:: [cm]
-	#					 List of mesh node (vertice) coordinates as floats
-	#					 Expects origin to be top-left corner
-	#	MeshConnections: 2D array of [[i, j],[i, j],...] 						:: [-]
-	#					 list of indices that identify connections between nodes
-	#					 indices are sequential to MeshCoordinates.
-	###############
-
-		# Convert strings in scientific notation to floats
-		Coords = [(float(Radius), float(Height)) for Radius, Height in MeshCoordinates]
-
-		# Plot nodes if requested (diagnostic tool)
-		if LabelNodes == True:
-			for idx, (Radius, Height) in enumerate(coords, start=1):
-				ax.scatter(Radius, Height, color="red", s=20)
-				ax.text(Radius, Height, f"{idx}", fontsize=8, ha="right", va="bottom")
-			#endfor
-		#endif
-
-		# Draw connections
-		for n in range(0,len(MeshConnections)):
-
-			# Sequentially read mesh connection indices
-			Conn = MeshConnections[n]
-
-			# Adjust for zero-based index
-			i = int(Conn[0]) - 1
-			j =  int(Conn[1]) - 1
-
-			# Extract coordinates at relevant connection indices
-			Radius1, Height1 = Coords[i]
-			Radius2, Height2 = Coords[j]
-
-			# Determine if line to be plotted is on symmetry axis
-			# If so, 'break' and skip to next 'n' to avoid plotting line at symmetry axis
-			if image_plotsymmetry == True:
-
-				# Get max height from current directory [l]
-				Height_Max = round( dz[l]*(Z_mesh[l]-1),2)
-
-				# Check if coordinate one is at the origin
-				if Radius1 == 0.0 and round(Height1,1) == 0.0:
-					# Check if either corresponding height coordinates are at maximum height
-					if abs(Height_Max - Height1) <= dz[l] or abs(Height_Max - Height2) <= dz[l]:
-						# If both are true, line is on symmetry axis
-						# Skip current line plotting
-						break
-					#endif
-				#endif
-
-				# Check if coordinate two is at the origin
-				if Radius2 == 0.0 and round(Height2,1) == 0.0:
-					# Check if either corresponding height coordinates are at maximum height
-					if abs(Height_Max - Height1) <= dz[l] or abs(Height_Max - Height2) <= dz[l]:
-						# If both are true, line is on symmetry axis
-						# Skip current line plotting
-						break
-					#endif
-				#endif
-			#endif
-
-			#=====#=====#
-
-			# Only works if rotating 90 to the right
-			if image_rotate == True and image_plotsymmetry == True:
-				Radius1,Height1 = Height1,Radius1
-				Radius2,Height2 = Height2,Radius2
-				ax.plot([Radius1, Radius2], [Height1, Height2], color='dimgrey', lw=2)
-				ax.plot([Radius2, Radius1], [-Height1, -Height2], color='dimgrey', lw=2)
-
-			# Only works if rotating 90 to the right
-			elif image_rotate == True and image_plotsymmetry == False:
-				Radius1,Height1 = Height1,Radius1
-				Radius2,Height2 = Height2,Radius2
-				Height1,Height2 = -Height2+R_mesh[l]*dr[l], -Height1+R_mesh[l]*dr[l]
-				ax.plot([Radius1, Radius2], [Height1, Height2], color='dimgrey', lw=2)
-
-			# Works for all cases
-			elif image_rotate == False and image_plotsymmetry == True:
-				ax.plot([Radius1, Radius2], [Height1, Height2], color='dimgrey', lw=2)
-				ax.plot([-Radius2, -Radius1], [Height1, Height2], color='dimgrey', lw=2)
-
-			# if no rotation or symmetry
-			else:
-				ax.plot([Radius1, Radius2], [Height1, Height2], color='dimgrey', lw=2)
-			#endif
-		#endfor
-
-		return()
-	#enddef
-
-	#=============#
 
 	def ManualPRCCPMesh(Ax=plt.gca()):
 		#Plot pocket rocket material dimensions.
@@ -2457,11 +2363,15 @@ def run(argv=None):
 	#=========================#
 	#=========================#
 
-	def ImageGeometry(fig,ax,image_plotsymmetry):
+	def ImageGeometry(fig,ax,
+	                  dz_i, dr_i, Z_mesh_i, R_mesh_i,
+	                  image_plotsymmetry):
 
 		#Plot mesh outline if requested.			!!! RM SJD, SHOULD EXPLICITLY PASS FOLDER [l]
 		if image_plotmesh == True:
-			PlotGeometry(ax,MeshCoordinates[l],MeshConnections[l],image_plotsymmetry)
+			plot_geometry(ax, MeshCoordinates[l], MeshConnections[l],
+			              dz_i, dr_i, Z_mesh_i, R_mesh_i,
+			              image_plotsymmetry, image_rotate)
 		elif image_plotmesh == 'PRCCP':
 			ManualPRCCPMesh(ax)
 		elif image_plotmesh == 'PRCCPM':
@@ -2484,7 +2394,9 @@ def run(argv=None):
 	#=========================#
 	#=========================#
 
-	def ImageOptions(fig,ax,Xlabel='',Ylabel='',Title='',Legend=[],Crop=True,Rotate=True):
+	def ImageOptions(fig,ax,
+	                 dz_i, dr_i, Z_mesh_i, R_mesh_i,
+	                 Xlabel='',Ylabel='',Title='',Legend=[],Crop=True,Rotate=True):
 	#Applies plt.options to current figure based on user input.
 	#Returns nothing, open figure is required, use figure().
 	#For best results call immediately before saving/displaying figure.
@@ -2541,7 +2453,9 @@ def run(argv=None):
 
 		#Plot mesh outline if requested.
 		if image_plotmesh and Crop == True:
-			PlotGeometry(ax,MeshCoordinates,MeshConnections,image_plotsymmetry)
+			plot_geometry(ax, MeshCoordinates, MeshConnections,
+			              dz_i, dr_i, Z_mesh_i, R_mesh_i,
+			              image_plotsymmetry, image_rotate)
 		elif image_plotmesh == 'PRCCP' and Crop == True:
 			ManualPRCCPMesh(ax)
 		elif image_plotmesh == 'PRCCPM' and Crop == True:
@@ -3881,10 +3795,14 @@ def run(argv=None):
 				#endif
 
 				# Apply mesh geometry to image
-				ImageGeometry(fig,ax,image_plotsymmetry)
+				ImageGeometry(fig,ax,
+				              dz[l], dr[l], Z_mesh[l], R_mesh[l],
+				              image_plotsymmetry)
 
 				# Apply image options, and enforce overides if requested
-				ImageOptions(fig,ax,Xlabel,Ylabel,Title,Crop=False)
+				ImageOptions(fig,ax,
+				             dz[l], dr[l], Z_mesh[l], R_mesh[l],
+				             Xlabel,Ylabel,Title,Crop=False)
 
 
 				#=====##=====# Image I/O #=====##=====#
@@ -4025,10 +3943,14 @@ def run(argv=None):
 					#endif
 
 					# Apply mesh geometry to image
-					ImageGeometry(fig,ax,image_plotsymmetry)
+					ImageGeometry(fig,ax,
+					              dz[l], dr[l], Z_mesh[l], R_mesh[l],
+					              image_plotsymmetry)
 
 					# Apply image options, and enforce overides if requested
-					ImageOptions(fig,ax,Xlabel,Ylabel,Title,Crop=False)
+					ImageOptions(fig,ax,
+					             dz[l], dr[l], Z_mesh[l], R_mesh[l],
+					             Xlabel,Ylabel,Title,Crop=False)
 
 
 					#=====##=====# Image I/O #=====##=====#
@@ -4237,7 +4159,9 @@ def run(argv=None):
 					#Apply image options and axis labels.
 					Title = 'Radial Profiles for '+VariableStrings[i]+' for \n'+Dirlist[l][2:-1]
 					Xlabel,Ylabel = 'Radial Distance R [cm]',variable_label_maker(VariableStrings, Units, image_logplot, AtomicSpecies)[i]
-					ImageOptions(fig,ax,Xlabel,Ylabel,Title,Legendlist,Crop=False)
+					ImageOptions(fig,ax,
+					             dz[l], dr[l], Z_mesh[l], R_mesh[l],
+					             Xlabel,Ylabel,Title,Legendlist,Crop=False)
 
 					#Save profiles in previously created folder.
 					plt.savefig(DirRlineouts+'1D_Radial_'+VariableStrings[i]+'_Profiles'+ext)
@@ -4309,7 +4233,9 @@ def run(argv=None):
 					#Apply image options and axis labels.
 					Title = 'Height Profiles for '+VariableStrings[i]+' for \n'+Dirlist[l][2:-1]
 					Xlabel,Ylabel = 'Axial Distance Z [cm]',variable_label_maker(VariableStrings, Units, image_logplot, AtomicSpecies)[i]
-					ImageOptions(fig,ax,Xlabel,Ylabel,Title,Legendlist,Crop=False)
+					ImageOptions(fig,ax,
+					             dz[l], dr[l], Z_mesh[l], R_mesh[l],
+					             label,Ylabel,Title,Legendlist,Crop=False)
 
 					#Save profiles in previously created folder.
 					plt.savefig(DirZlineouts+'1D_Axial_'+VariableStrings[i]+'_Profiles'+ext)
@@ -4411,7 +4337,9 @@ def run(argv=None):
 					#Apply image options and axis labels.
 					Title = 'Comparison of '+VariableStrings[k]+' Profiles at Z='+str(round((radialprofiles[j])*dz[l], 2))+'cm for \n'+Dirlist[l][2:-1]
 					Xlabel,Ylabel,Legend = 'Radial Distance R [cm]',Ylabels[k],Legendlist
-					ImageOptions(fig,ax,Xlabel,Ylabel,Title,Legendlist,Crop=False)
+					ImageOptions(fig,ax,
+					             dz[l], dr[l], Z_mesh[l], R_mesh[l],
+					             Xlabel,Ylabel,Title,Legendlist,Crop=False)
 				#endfor
 
 				#Save one image per variable with data from all simulations.
@@ -4476,7 +4404,9 @@ def run(argv=None):
 					#Apply image options and axis labels.
 					Title = 'Comparison of '+VariableStrings[k]+' Profiles at R='+str(round((axialprofiles[j])*dr[l], 1))+'cm for \n'+Dirlist[l][2:-1]
 					Xlabel,Ylabel,Legend = 'Axial Distance Z [cm]',Ylabels[k],Legendlist
-					ImageOptions(fig,ax,Xlabel,Ylabel,Title,Legendlist,Crop=False)
+					ImageOptions(fig,ax,
+					             dz[l], dr[l], Z_mesh[l], R_mesh[l],
+					             Xlabel,Ylabel,Title,Legendlist,Crop=False)
 				#endfor
 
 				#Save one image per variable with data from all simulations.
@@ -4550,7 +4480,9 @@ def run(argv=None):
 						#Apply image options and axis labels.
 						Title = str(round((axialprofiles[j])*dr[l], 2))+'cm Height profiles for '+VariableStrings[i]+','' for \n'+Dirlist[l][2:-1]
 						Xlabel,Ylabel = 'Axial Distance Z [cm]',variable_label_maker(VariableStrings, Units, image_logplot, AtomicSpecies)[i]
-						ImageOptions(fig,ax,Xlabel,Ylabel,Title,Legendlist,Crop=False)
+						ImageOptions(fig,ax,
+						             dz[l], dr[l], Z_mesh[l], R_mesh[l],
+						             Xlabel,Ylabel,Title,Legendlist,Crop=False)
 
 						#Save figures in original folder.
 						R = 'R='+str(round((axialprofiles[j])*dr[l], 2))+'_'
@@ -4604,7 +4536,9 @@ def run(argv=None):
 						#Apply image options and axis labels.
 						Title = str(round((radialprofiles[j])*dz[l], 2))+'cm Radial Profiles for '+VariableStrings[i]+' for \n'+Dirlist[l][2:-1]
 						Xlabel,Ylabel = 'Radial Distance R [cm]',variable_label_maker(VariableStrings, Units, image_logplot, AtomicSpecies)[i]
-						ImageOptions(fig,ax,Xlabel,Ylabel,Title,Legendlist,Crop=False)
+						ImageOptions(fig,ax,
+						             dz[l], dr[l], Z_mesh[l], R_mesh[l],
+						             Xlabel,Ylabel,Title,Legendlist,Crop=False)
 
 						#Save lines in previously created folder.
 						Z = 'Z='+str(round((radialprofiles[j])*dz[l], 2))+'_'
@@ -4684,7 +4618,9 @@ def run(argv=None):
 							#Apply image options and axis labels.
 							Title = 'Radial Profiles of '+VariableStrings[i]+' for \n'+Dirlist[l][2:-1]
 							Xlabel,Ylabel = 'Radial Distance R [cm]',variable_label_maker(VariableStrings, Units, image_logplot, AtomicSpecies)[i]
-							ImageOptions(fig,ax,Xlabel,Ylabel,Title,[str(MovieIterlist[l][k])],Crop=False)
+							ImageOptions(fig,ax,
+							             dz[l], dr[l], Z_mesh[l], R_mesh[l],
+							             Xlabel,Ylabel,Title,[str(MovieIterlist[l][k])],Crop=False)
 
 							#Save profiles in variable and profile location named folder
 							plt.savefig(DirProfile+'1D_Z='+Slice+'_'+VariableStrings[i]+'_'+str(IterArray[k]).zfill(4)+ext)
@@ -4714,7 +4650,9 @@ def run(argv=None):
 						#Apply image options and axis labels.
 						Title = 'Radial Profiles of '+VariableStrings[i]+' for \n'+Dirlist[l][2:-1]
 						Xlabel,Ylabel = 'Radial Distance R [cm]',variable_label_maker(VariableStrings, Units, image_logplot, AtomicSpecies)[i]
-						ImageOptions(fig,ax,Xlabel,Ylabel,Title,[],Crop=False)
+						ImageOptions(fig,ax,
+						             dz[l], dr[l], Z_mesh[l], R_mesh[l],
+						             Xlabel,Ylabel,Title,[],Crop=False)
 
 						#Save profiles Radial_Profiles folder.
 						plt.savefig(DirRlineouts+'1D_'+Slice+'_'+VariableStrings[i]+'_Profiles'+ext)
@@ -4759,7 +4697,9 @@ def run(argv=None):
 							#Apply image options and axis labels.
 							Title = 'Height Profiles of '+VariableStrings[i]+' for \n'+Dirlist[l][2:-1]
 							Xlabel,Ylabel = 'Axial Distance Z [cm]',variable_label_maker(VariableStrings, Units, image_logplot, AtomicSpecies)[i]
-							ImageOptions(fig,ax,Xlabel,Ylabel,Title,[str(MovieIterlist[l][k])],Crop=False)
+							ImageOptions(fig,ax,
+							             dz[l], dr[l], Z_mesh[l], R_mesh[l],
+							             Xlabel,Ylabel,Title,[str(MovieIterlist[l][k])],Crop=False)
 
 							#Save profiles in variable and profile location named folder
 							plt.savefig(DirProfile+'1D_R='+Slice+'_'+VariableStrings[i]+'_'+str(IterArray[k]).zfill(4)+ext)
@@ -4789,7 +4729,9 @@ def run(argv=None):
 						#Apply image options and axis labels.
 						Title = 'Height Profiles for '+VariableStrings[i]+' for \n'+Dirlist[l][2:-1]
 						Xlabel,Ylabel = 'Axial Distance Z [cm]',variable_label_maker(VariableStrings, Units, image_logplot, AtomicSpecies)[i]
-						ImageOptions(fig,ax,Xlabel,Ylabel,Title,[],Crop=False)
+						ImageOptions(fig,ax,
+						             dz[l], dr[l], Z_mesh[l], R_mesh[l],
+						             Xlabel,Ylabel,Title,[],Crop=False)
 
 						#Save profiles Axial_Profiles folder.
 						plt.savefig(DirZlineouts+'1D_'+Slice+'_'+VariableStrings[i]+'_Profiles'+ext)
@@ -4857,7 +4799,9 @@ def run(argv=None):
 				Title = 'Mesh-Averaged Temporal Profile of '+str(VariableStrings[i])+' for \n'+Dirlist[l][2:-1]
 				Xlabel = 'Simulation time [ms]'
 				Ylabel =variable_label_maker(VariableStrings, Units, image_logplot, AtomicSpecies)[i]
-				ImageOptions(fig,ax,Xlabel,Ylabel,Title,Legend=[],Crop=False)
+				ImageOptions(fig,ax,
+				             dz[l], dr[l], Z_mesh[l], R_mesh[l],
+				             Xlabel,Ylabel,Title,Legend=[],Crop=False)
 
 				#=====##=====# Image I/O #=====##=====#
 
@@ -4915,7 +4859,9 @@ def run(argv=None):
 			# Image plotting details.
 			Title = 'Mesh-Averaged Temporal Profiles of '+str(VariableStrings)+' for \n'+Dirlist[l][2:-1]
 			Xlabel,Ylabel = 'Simulation time [ms]','Normalised Mesh-Average Value'
-			ImageOptions(fig,ax,Xlabel,Ylabel,Title,Legend,Crop=False)
+			ImageOptions(fig,ax,
+			             dz[l], dr[l], Z_mesh[l], R_mesh[l],
+			             Xlabel,Ylabel,Title,Legend,Crop=False)
 			ax.set_ylim(0,1)
 
 			# Save figure.
@@ -5019,7 +4965,9 @@ def run(argv=None):
 				#Image plotting details.
 				Title = 'Convergence of '+str(VariableStrings)+' for \n'+Dirlist[l][2:-1]
 				Xlabel,Ylabel = 'Simulation Iteration [-]',labelstring
-				ImageOptions(fig,ax,Xlabel,Ylabel,Title,Legend,Crop=False)
+				ImageOptions(fig,ax,
+				             dz[l], dr[l], Z_mesh[l], R_mesh[l],
+				             Xlabel,Ylabel,Title,Legend,Crop=False)
 				plt.tight_layout()
 
 
@@ -5177,14 +5125,18 @@ def run(argv=None):
 				cax = Colourbar(ax[0],VariableStrings[i]+' EDF($\\theta$)',5)
 				Xlabel,Ylabel = '','Angular Dispersion [$\\theta^{\circ}$]'
 				ImageCrop = [[0,int(eVlimit)],[-45,45]]					#[[X1,X2],[Y1,Y2]]
-				ImageOptions(fig,ax[0],Xlabel,Ylabel,Title,Crop=ImageCrop,Rotate=False)
+				ImageOptions(fig,ax[0],
+				             dz[l], dr[l], Z_mesh[l], R_mesh[l],
+				             Xlabel,Ylabel,Title,Crop=ImageCrop,Rotate=False)
 
 				#Angle Integrated IEDF figure
 				ax[1].plot(eVaxis,EDFprofile, lw=2)
 				cax = InvisibleColourbar(ax[1])
 				Xlabel,Ylabel = 'Energy [eV]',VariableStrings[i]+' EDF \n [$\\theta$ Integrated]'
 				ImageCrop = [[0,int(eVlimit)],[0,max(EDFprofile)*1.05]]	#[[X1,X2],[Y1,Y2]]
-				ImageOptions(fig,ax[1],Xlabel,Ylabel,Crop=ImageCrop,Rotate=False)
+				ImageOptions(fig,ax[1],
+				             dz[l], dr[l], Z_mesh[l], R_mesh[l],
+				             Xlabel,Ylabel,Crop=ImageCrop,Rotate=False)
 
 				#=====##=====# Image I/O #=====##=====#
 
@@ -5462,7 +5414,9 @@ def run(argv=None):
 			Title = Dirlist[l][2::]+'\n'+VariableStrings[i]+' Angular Energy Distribution Function Profiles'
 			Xlabel,Ylabel = 'Energy [eV]',VariableStrings[i]+' EDF [$\\theta$ Integrated]'
 			ImageCrop = [ [0,GlobRange_eV[1]], [] ]		#[[X1,X2],[Y1,Y2]]
-			ImageOptions(fig,ax,Xlabel,Ylabel,Title,Legendlist,Crop=ImageCrop,Rotate=False)
+			ImageOptions(fig,ax,
+			             dz[l], dr[l], Z_mesh[l], R_mesh[l],
+			             Xlabel,Ylabel,Title,Legendlist,Crop=ImageCrop,Rotate=False)
 
 			plt.savefig(DirIEDFTrends+VariableStrings[i]+'_EDFprofiles'+ext)
 			clearfigures(fig)
@@ -5481,7 +5435,9 @@ def run(argv=None):
 			Legend = ['EDF Mean Energy','EDF Mode Energy','EDF Min Energy','EDF Max Energy']
 			Xlabel,Ylabel = 'Varied Property',VariableStrings[i]+' Energy [eV]'
 			ImageCrop = [[],[0,max(Mean_eV+Mode_eV)*1.15]]		#[[X1,X2],[Y1,Y2]]
-			ImageOptions(fig,ax,Xlabel,Ylabel,Title,Legend,Crop=ImageCrop,Rotate=False)
+			ImageOptions(fig,ax,
+			             dz[l], dr[l], Z_mesh[l], R_mesh[l],
+			             Xlabel,Ylabel,Title,Legend,Crop=ImageCrop,Rotate=False)
 
 			plt.savefig(DirIEDFTrends+VariableStrings[i]+'_AverageEnergies'+ext)
 			clearfigures(fig)
@@ -5612,7 +5568,9 @@ def run(argv=None):
 				TrendPlotter(ax,Trend,Xaxis,NormFactor=0)
 				Title='Trend in max '+VariableStrings[k]+' with changing '+TrendVariable+' \n'+Dirlist[l][2:-1]
 				Xlabel,Ylabel = 'Varied Property','Max '+YaxisLegend[k]
-				ImageOptions(fig,ax,Xlabel,Ylabel,Title,Legendlist,Crop=False)
+				ImageOptions(fig,ax,
+				             dz[l], dr[l], Z_mesh[l], R_mesh[l],
+				             Xlabel,Ylabel,Title,Legendlist,Crop=False)
 
 				#Write data to ASCII format datafile if requested.
 				if write_ASCII == True:
@@ -5675,7 +5633,9 @@ def run(argv=None):
 				TrendPlotter(ax,Trend,Xaxis,NormFactor=0)
 				Title='Trend in max '+VariableStrings[k]+' with changing '+TrendVariable+' \n'+Dirlist[l][2:-1]
 				Xlabel,Ylabel = 'Varied Property','Max '+YaxisLegend[k]
-				ImageOptions(fig,ax,Xlabel,Ylabel,Title,Legendlist,Crop=False)
+				ImageOptions(fig,ax,
+				             dz[l], dr[l], Z_mesh[l], R_mesh[l],
+				             Xlabel,Ylabel,Title,Legendlist,Crop=False)
 
 				#Write data to ASCII format datafile if requested.
 				if write_ASCII == True:
@@ -5780,7 +5740,9 @@ def run(argv=None):
 		#Apply image options and axis labels.
 		Title = 'Trend in DCbias with changing '+TrendVariable+' \n'+Dirlist[l][2:-1]
 		Xlabel,Ylabel = 'Varied Property','DC bias [V]'
-		ImageOptions(fig,ax,Xlabel,Ylabel,Title,Crop=False)
+		ImageOptions(fig,ax,
+		             dz[l], dr[l], Z_mesh[l], R_mesh[l],
+		             Xlabel,Ylabel,Title,Crop=False)
 
 		plt.savefig(DirTrends+'Powered Electrode DCbias'+ext)
 		clearfigures(fig)
@@ -5890,7 +5852,9 @@ def run(argv=None):
 			#Apply image options and axis labels.
 			Title = 'Power Deposition with changing '+TrendVariable+' \n'+Dirlist[l][2:-1]
 			Xlabel,Ylabel = 'Varied Property','Power Deposited [W]'
-			ImageOptions(fig,ax,Xlabel,Ylabel,Title,Legend=RequestedPowers,Crop=False)
+			ImageOptions(fig,ax,
+			             dz[l], dr[l], Z_mesh[l], R_mesh[l],
+			             Xlabel,Ylabel,Title,Legend=RequestedPowers,Crop=False)
 
 			plt.savefig(DirTrends+RequestedPowers[k]+' Deposition Trends'+ext)
 			clearfigures(fig)
@@ -5911,7 +5875,9 @@ def run(argv=None):
 		#Apply image options and axis labels.
 		Title = 'Power Deposition with changing '+TrendVariable+' \n'+Dirlist[l][2:-1]
 		Xlabel,Ylabel = 'Varied Property','Power Deposited [W]'
-		ImageOptions(fig,ax,Xlabel,Ylabel,Title,Legend=RequestedPowers,Crop=False)
+		ImageOptions(fig,ax,
+		             dz[l], dr[l], Z_mesh[l], R_mesh[l],
+		             Xlabel,Ylabel,Title,Legend=RequestedPowers,Crop=False)
 
 		plt.savefig(DirTrends+'Power Deposition Comparison'+ext)
 		clearfigures(fig)
@@ -6146,7 +6112,9 @@ def run(argv=None):
 			Title='Thrust at Z='+str(round(thrustloc*dz[0],2))+'cm with varying '+TrendVariable+' \n'+Dirlist[l][2:-1]
 			Xlabel,Ylabel = 'Varied Property','Thrust F$_{T}$ [mN]'
 			ax1.legend(['Total Thrust','Neutral Thrust','Pressure Thrust','Ion Thrust'], fontsize=18, frameon=False)
-			ImageOptions(fig,ax1,Xlabel,Ylabel,Title,Crop=False)
+			ImageOptions(fig,ax1,
+			             dz[l], dr[l], Z_mesh[l], R_mesh[l],
+			             Xlabel,Ylabel,Title,Crop=False)
 
 			plt.savefig(DirTrends+'Thrust Trends'+ext)
 			clearfigures(fig)
@@ -6163,7 +6131,9 @@ def run(argv=None):
 			Title = 'Specific Impulse at Z='+str(round(thrustloc*dz[0],2))+'cm with varying '+TrendVariable+' \n'+Dirlist[l][2:-1]
 			Xlabel,Ylabel = 'Varied Property','Specific Impulse I$_{sp}$ [s]'
 			ax1.legend(['Total I$_{sp}$','Neutral Component','Ion Component'], fontsize=18, frameon=False)
-			ImageOptions(fig,ax1,Xlabel,Ylabel,Title,Crop=False)
+			ImageOptions(fig,ax1,
+			             dz[l], dr[l], Z_mesh[l], R_mesh[l],
+			             Xlabel,Ylabel,Title,Crop=False)
 
 			plt.savefig(DirTrends+'Isp Trends'+ext)
 			clearfigures(fig)
@@ -6253,7 +6223,9 @@ def run(argv=None):
 		#Apply image options and axis labels.
 		Title = 'Maximum Sheath Extension With Varying '+TrendVariable+' \n'+Dirlist[l][2:-1]
 		Xlabel,Ylabel = 'Varied Property','Sheath Extension [mm]'
-		ImageOptions(fig,ax,Xlabel,Ylabel,Title,Legend=[],Crop=False)
+		ImageOptions(fig,ax,
+		             dz[l], dr[l], Z_mesh[l], R_mesh[l],
+		             Xlabel,Ylabel,Title,Legend=[],Crop=False)
 
 		plt.savefig(DirTrends+'Sheath Extension (Phase-Averaged)'+ext)
 		clearfigures(fig)
@@ -6339,7 +6311,9 @@ def run(argv=None):
 				Title = 'Knudsen Number Image for \n'+Dirlist[l][2:-1]
 				Xlabel,Ylabel = 'Radial Distance R [cm]','Axial Distance Z [cm]'
 				cax = Colourbar(ax,'Knudsen Number $K_{n}$',5,Lim=CbarMinMax(ax,Image))
-				ImageOptions(fig,ax,Xlabel,Ylabel,Title)
+				ImageOptions(fig,ax,
+				             dz[l], dr[l], Z_mesh[l], R_mesh[l],
+				             Xlabel,Ylabel,Title)
 
 				#Save Figure
 				plt.savefig(Dir2Dplots+'2DPlot_Kn'+ext)
@@ -6365,7 +6339,9 @@ def run(argv=None):
 			#Image plotting details.
 			Title = 'Average Knudsen Number with Varying '+TrendVariable+' \n'+Dirlist[l][2:-1]
 			Xlabel,Ylabel = 'Varied Property','Average Knudsen Number $K_{n}$'
-			ImageOptions(fig,ax,Xlabel,Ylabel,Title,Crop=False)
+			ImageOptions(fig,ax,
+			             dz[l], dr[l], Z_mesh[l], R_mesh[l],
+			             Xlabel,Ylabel,Title,Crop=False)
 
 			#Save figure.
 			plt.savefig(DirTrends+'KnudsenNumber_Comparison'+ext)
@@ -6458,7 +6434,9 @@ def run(argv=None):
 				Title = 'Sound Speed Image for \n'+Dirlist[l][2:-1]
 				Xlabel,Ylabel = 'Radial Distance R [cm]','Axial Distance Z [cm]'
 				cax = Colourbar(ax,'Sound Speed $C_{s}$ [m/s]',5,Lim=[])
-				ImageOptions(fig,ax,Xlabel,Ylabel,Title)
+				ImageOptions(fig,ax,
+				             dz[l], dr[l], Z_mesh[l], R_mesh[l],
+				             Xlabel,Ylabel,Title)
 
 				#Save Figure
 				plt.savefig(Dir2Dplots+'2DPlot_Cs'+ext)
@@ -6484,7 +6462,9 @@ def run(argv=None):
 			#Image plotting details.
 			Title = 'Average Sound Speed with Varying '+TrendVariable+' \n'+Dirlist[l][2:-1]
 			Xlabel,Ylabel = 'Varied Property','Average Sound Speed'
-			ImageOptions(fig,ax,Xlabel,Ylabel,Title,Crop=False)
+			ImageOptions(fig,ax,
+			             dz[l], dr[l], Z_mesh[l], R_mesh[l],
+			             Xlabel,Ylabel,Title,Crop=False)
 
 			#Save figure.
 			plt.savefig(DirTrends+'SoundSpeed_Comparison'+ext)
@@ -6617,7 +6597,9 @@ def run(argv=None):
 			Title = 'Phase-Resolved Voltage Waveforms for ' + folder_name_trimmer(Dirlist[l])
 			Legend = ['Waveform Vpp: '+str(round(ElectrodeVpp[2],2))+'V']
 			Xlabel,Ylabel = 'Phase [$\omega$t/2$\pi$]','Electrode Potential [V]'
-			ImageOptions(fig,ax,Xlabel,Ylabel,Title,Legend,Crop=False)
+			ImageOptions(fig,ax,
+			             dz[l], dr[l], Z_mesh[l], R_mesh[l],
+			             Xlabel,Ylabel,Title,Legend,Crop=False)
 			ax.xaxis.set_major_locator(ticker.MultipleLocator(0.25))
 
 			plt.savefig(Dirphaseresolved+VariedValuelist[l]+' Waveform'+ext)
@@ -6718,7 +6700,9 @@ def run(argv=None):
 
 						#Plot profile and apply image options.
 						ax0.plot(axis, phaseresolvedProfile, lw=2)
-						ImageOptions(fig,ax0,Xlabel,Ylabel[i],Crop=False)
+						ImageOptions(fig,ax0,
+						             dz[l], dr[l], Z_mesh[l], R_mesh[l],
+						             Xlabel,Ylabel[i],Crop=False)
 						ax0.set_ylim(VariableMin,VariableMax*1.02)
 
 						if image_plotphasewaveform == True:
@@ -6726,7 +6710,9 @@ def run(argv=None):
 							ax1.plot(Phaseaxis, ElectrodeWaveform, lw=2)
 							ax1.axvline(Phaseaxis[j], color='k', linestyle='--', lw=2)
 							Xlabel,Ylabel = 'Phase [$\omega$t/2$\pi$]','Electrode Potential [V]'
-							ImageOptions(fig,ax1,Xlabel,Ylabel,Crop=False)
+							ImageOptions(fig,ax1,
+							             dz[l], dr[l], Z_mesh[l], R_mesh[l],
+							             Xlabel,Ylabel,Crop=False)
 
 							#Clean up image subfigures
 							fig.tight_layout()
@@ -6869,7 +6855,9 @@ def run(argv=None):
 				Title = 'Phase-Resolved Voltage Waveforms for ' + folder_name_trimmer(Dirlist[l])
 				Legend = ['Waveform Vpp: '+str(round(ElectrodeVpp[2],2))+'V']
 				Xlabel,Ylabel = 'Phase [$\omega$t/2$\pi$]','Electrode Potential [V]'
-				ImageOptions(fig,ax,Xlabel,Ylabel,Title,Legend,Crop=False)
+				ImageOptions(fig,ax,
+				             dz[l], dr[l], Z_mesh[l], R_mesh[l],
+				             Xlabel,Ylabel,Title,Legend,Crop=False)
 				ax.xaxis.set_major_locator(ticker.MultipleLocator(0.25))
 
 				plt.savefig(Dirphaseresolved+VariedValuelist[l]+' Waveform'+ext)
@@ -6998,7 +6986,9 @@ def run(argv=None):
 						ax1Xlabel,ax1Ylabel = 'Phase [$\omega$t/2$\pi$]','Electrode Potential [V]'
 
 						#Apply image options
-						ImageOptions(fig,ax1,ax1Xlabel,ax1Ylabel,Crop=False)
+						ImageOptions(fig,ax1,
+						             dz[l], dr[l], Z_mesh[l], R_mesh[l],
+						             ax1Xlabel,ax1Ylabel,Crop=False)
 						ax1.xaxis.set_major_locator(ticker.MultipleLocator(0.25))
 
 						#Add Invisible Colourbar to sync X-axis
@@ -7028,10 +7018,14 @@ def run(argv=None):
 					#endif
 
 					# Apply mesh geometry to image
-					ImageGeometry(fig,ax0,image_plotsymmetry)
+					ImageGeometry(fig,ax0,
+					              dz[l], dr[l], Z_mesh[l], R_mesh[l],
+					              image_plotsymmetry)
 
 					# Apply image options, and enforce overides if requested
-					ImageOptions(fig,ax0,Xlabel,Ylabel,Title,Crop=False)
+					ImageOptions(fig,ax0,
+					             dz[l], dr[l], Z_mesh[l], R_mesh[l],
+					             Xlabel,Ylabel,Title,Crop=False)
 
 
 					#=====##=====# Image I/O #=====##=====#
@@ -7224,12 +7218,16 @@ def run(argv=None):
 			ax[0].plot(Phaseaxis,SxLoc, lw=2)
 			Title = 'Phase-Resolved Sheath Extension for '+VariedValuelist[l]
 			Ylabel = 'Sheath Extension [mm]'
-			ImageOptions(fig,ax[0],Title=Title,Ylabel=Ylabel,Crop=False)
+			ImageOptions(fig,ax[0],
+			             dz[l], dr[l], Z_mesh[l], R_mesh[l],
+			             Title=Title,Ylabel=Ylabel,Crop=False)
 
 			ax[1].plot(Phaseaxis, ElectrodeWaveform, lw=2)
 			ax[1].plot(Phaseaxis, ElectrodeBias, 'k--', lw=2)
 			Xlabel,Ylabel = 'Phase [$\omega$t/2$\pi$]','Electrode Potential [V]'
-			ImageOptions(fig,ax[1],Xlabel,Ylabel,Crop=False)
+			ImageOptions(fig,ax[1],
+			             dz[l], dr[l], Z_mesh[l], R_mesh[l],
+			             Xlabel,Ylabel,Crop=False)
 
 			plt.savefig(Dirphaseresolved+VariedValuelist[l]+' SheathDynamics'+ext)
 			clearfigures(fig)
@@ -7265,7 +7263,9 @@ def run(argv=None):
 		TrendPlotter(ax,SxMaxExtTrend,VariedValuelist,NormFactor=0)
 		Title='Maximum Sheath Extension W.R.T '+TrendVariable+' \n'+Dirlist[l][2:-1]
 		Xlabel,Ylabel = 'Varied Property','Max Sheath Extension [mm]'
-		ImageOptions(fig,ax,Xlabel,Ylabel,Title,Crop=False)
+		ImageOptions(fig,ax,
+		             dz[l], dr[l], Z_mesh[l], R_mesh[l],
+		             Xlabel,Ylabel,Title,Crop=False)
 
 		plt.savefig(DirSheath+'Max Sheath Extension Trends'+ext)
 		clearfigures(fig)
@@ -7275,7 +7275,9 @@ def run(argv=None):
 		TrendPlotter(ax,SxMeanExtTrend,VariedValuelist,NormFactor=0)
 		Title='Mean Sheath Extension W.R.T '+TrendVariable+' \n'+Dirlist[l][2:-1]
 		Xlabel,Ylabel = 'Varied Property','Mean Sheath Extension [mm]'
-		ImageOptions(fig,ax,Xlabel,Ylabel,Title,Crop=False)
+		ImageOptions(fig,ax,
+		             dz[l], dr[l], Z_mesh[l], R_mesh[l],
+		             Xlabel,Ylabel,Title,Crop=False)
 
 		plt.savefig(DirSheath+'Mean Sheath Extension Trends'+ext)
 		clearfigures(fig)
@@ -7285,7 +7287,9 @@ def run(argv=None):
 		TrendPlotter(ax,SxDynRangeTrend,VariedValuelist,NormFactor=0)
 		Title='Sheath Dynamic Range W.R.T '+TrendVariable+' \n'+Dirlist[l][2:-1]
 		Xlabel,Ylabel = 'Varied Property','Sheath Dynamic Range [mm]'
-		ImageOptions(fig,ax,Xlabel,Ylabel,Title,Crop=False)
+		ImageOptions(fig,ax,
+		             dz[l], dr[l], Z_mesh[l], R_mesh[l],
+		             Xlabel,Ylabel,Title,Crop=False)
 
 		plt.savefig(DirSheath+'Sheath Dynamic Range Trends'+ext)
 		clearfigures(fig)
@@ -7295,7 +7299,9 @@ def run(argv=None):
 		TrendPlotter(ax,SxMaxVelTrend,VariedValuelist,NormFactor=0)
 		Title='Maximum Sheath Velocity W.R.T '+TrendVariable+' \n'+Dirlist[l][2:-1]
 		Xlabel,Ylabel = 'Varied Property','Sheath Velocity [km/s]'
-		ImageOptions(fig,ax,Xlabel,Ylabel,Title,Crop=False)
+		ImageOptions(fig,ax,
+		             dz[l], dr[l], Z_mesh[l], R_mesh[l],
+		             Xlabel,Ylabel,Title,Crop=False)
 
 		plt.savefig(DirSheath+'Max Sheath Velocity Trends'+ext)
 		clearfigures(fig)
@@ -7305,7 +7311,9 @@ def run(argv=None):
 		TrendPlotter(ax,SxMeanVelTrend,VariedValuelist,NormFactor=0)
 		Title='Phase-averaged Sheath Velocity W.R.T '+TrendVariable+' \n'+Dirlist[l][2:-1]
 		Xlabel,Ylabel = 'Varied Property','Sheath Velocity [km/s]'
-		ImageOptions(fig,ax,Xlabel,Ylabel,Title,Crop=False)
+		ImageOptions(fig,ax,
+		             dz[l], dr[l], Z_mesh[l], R_mesh[l],
+		             Xlabel,Ylabel,Title,Crop=False)
 
 		plt.savefig(DirSheath+'Mean Sheath Velocity Trends'+ext)
 		clearfigures(fig)
@@ -7393,7 +7401,9 @@ def run(argv=None):
 			Title = 'Phase-Resolved Voltage Waveforms for ' + folder_name_trimmer(Dirlist[l])
 			Legend = ['Waveform Vpp: '+str(round(ElectrodeVpp[2],2))+'V']
 			Xlabel,Ylabel = 'Phase [$\omega$t/2$\pi$]','Electrode Potential [V]'
-			ImageOptions(fig,ax,Xlabel,Ylabel,Title,Legend,Crop=False)
+			ImageOptions(fig,ax,
+			             dz[l], dr[l], Z_mesh[l], R_mesh[l],
+			             Xlabel,Ylabel,Title,Legend,Crop=False)
 			ax.xaxis.set_major_locator(ticker.MultipleLocator(0.25))
 
 			plt.savefig(DirPROES+VariedValuelist[l]+' Waveform'+ext)
@@ -7537,7 +7547,9 @@ def run(argv=None):
 					#endif
 
 					#Apply image options and set axes size
-					ImageOptions(fig,ax[0],Xlabel='',Ylabel=Ylabel,Crop=Crop)
+					ImageOptions(fig,ax[0],
+					             dz[l], dr[l], Z_mesh[l], R_mesh[l],
+					             Xlabel='',Ylabel=Ylabel,Crop=Crop)
 					ax[0].set_xticks([])
 					ax[0].set_xlim(x1,x2)
 					ax[0].set_ylim(y1,y2)
@@ -7549,7 +7561,9 @@ def run(argv=None):
 					ax[1].plot(Phaseaxis, ElectrodeWaveform, lw=2)
 					ax[1].plot(Phaseaxis, ElectrodeBias, 'k--', lw=2)
 					Xlabel,Ylabel = 'Phase [$\omega$t/2$\pi$]','Electrode Potential [V]'
-					ImageOptions(fig,ax[1],Xlabel,Ylabel,Crop=False)
+					ImageOptions(fig,ax[1],
+					             dz[l], dr[l], Z_mesh[l], R_mesh[l],
+					             Xlabel,Ylabel,Crop=False)
 					ax[1].xaxis.set_major_locator(ticker.MultipleLocator(0.25))
 					ax[1].set_xlim(x1,x2)
 					#Add Invisible Colourbar to sync X-axis
@@ -7583,14 +7597,18 @@ def run(argv=None):
 					ax[0].plot(Phaseaxis,TemporalPROES, lw=2)
 					Title = 'Spatially Integrated '+varlist[i]+' for '+VariedValuelist[l]+ProfileString+'\n DoF = '+str(round(((2*DoFwidth)+1)*dz[l],2))+' cm'
 					Ylabel = 'Spatially Integrated '+varlist[i]
-					ImageOptions(fig,ax[0],Title=Title,Ylabel=Ylabel,Crop=False)
+					ImageOptions(fig,ax[0],
+					             dz[l], dr[l], Z_mesh[l], R_mesh[l],
+					             Title=Title,Ylabel=Ylabel,Crop=False)
 	#				ax[0].set_xlim(x1,x2)
 
 					#Plot Waveform onto Temporally collapsed PROES.
 					ax[1].plot(Phaseaxis, ElectrodeWaveform, lw=2)
 					ax[1].plot(Phaseaxis, ElectrodeBias, 'k--', lw=2)
 					Xlabel,Ylabel = 'Phase [$\omega$t/2$\pi$]','Electrode Potential [V]'
-					ImageOptions(fig,ax[1],Xlabel,Ylabel,Crop=False)
+					ImageOptions(fig,ax[1],
+					             dz[l], dr[l], Z_mesh[l], R_mesh[l],
+					             Xlabel,Ylabel,Crop=False)
 	#				ax[1].set_xlim(x1,x2)
 
 					plt.savefig(DirPROESloc+VariedValuelist[l]+' '+NameString+' TemporalPROES'+ext)
